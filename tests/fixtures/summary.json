@@ -1,0 +1,45 @@
+{
+  "groups": {
+    "english": {
+      "refund": {
+        "n": 3,
+        "successes": 2,
+        "tool_passes": 2,
+        "success_rate": 0.667,
+        "success_ci": [0.21, 0.95],
+        "tool_rate": 0.667,
+        "tool_ci": [0.21, 0.95],
+        "mean_language_fit": null,
+        "pass_at_k": 0.333,
+        "k": 3
+      },
+      "delivery": {
+        "n": 3,
+        "successes": 1,
+        "tool_passes": 3,
+        "success_rate": 0.333,
+        "success_ci": [0.06, 0.75],
+        "tool_rate": 1.0,
+        "tool_ci": [0.44, 1.0],
+        "mean_language_fit": null,
+        "pass_at_k": null,
+        "k": 3
+      }
+    },
+    "hinglish": {
+      "refund": {
+        "n": 3,
+        "successes": 3,
+        "tool_passes": 3,
+        "success_rate": 1.0,
+        "success_ci": [0.44, 1.0],
+        "tool_rate": 1.0,
+        "tool_ci": [0.44, 1.0],
+        "mean_language_fit": 4.0,
+        "pass_at_k": 1.0,
+        "k": 3
+      }
+    }
+  },
+  "worst_transcripts": []
+}

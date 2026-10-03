@@ -318,5 +318,32 @@ def report(
     typer.echo(f"Report written to {results_dir}/")
 
 
+# ------------------------------------------------------------------ #
+# hcb plot                                                             #
+# ------------------------------------------------------------------ #
+
+
+@app.command()
+def plot(
+    results_dir: Path = typer.Argument(  # noqa: B008
+        Path("results"), help="Directory containing summary.json."
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        None, help="Output directory for PNGs (default: <results_dir>/plots/)."
+    ),
+) -> None:
+    """Generate bar charts from results/summary.json. Requires matplotlib."""
+    from hinglish_bench.plot import generate_plots
+
+    out = output_dir if output_dir is not None else (results_dir / "plots")
+    summary = results_dir / "summary.json"
+    if not summary.exists():
+        typer.echo(f"summary.json not found in {results_dir}. Run `hcb report` first.", err=True)
+        raise typer.Exit(code=1)
+    paths = generate_plots(summary, out)
+    for p in paths:
+        typer.echo(f"Wrote {p}")
+
+
 def main() -> None:
     app()
