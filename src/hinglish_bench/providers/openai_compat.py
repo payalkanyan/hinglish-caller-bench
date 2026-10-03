@@ -1,12 +1,18 @@
 """Provider for any OpenAI-compatible endpoint (Groq, OpenRouter, Gemini)."""
 
 import asyncio
+import json
 import time
 
 import openai
 from openai import AsyncOpenAI
 
-from hinglish_bench.providers.base import ChatRequest, ChatResponse, InfraError
+from hinglish_bench.providers.base import (
+    ChatRequest,
+    ChatResponse,
+    InfraError,
+    ToolCallRaw,
+)
 from hinglish_bench.providers.ratelimit import TokenBucket, backoff_delay
 
 # Errors worth retrying. Auth and bad-request errors are not, and propagate as-is.
@@ -59,8 +65,21 @@ class OpenAICompatProvider:
             start = time.monotonic()
             resp = await self._client.chat.completions.create(**kwargs)  # type: ignore[arg-type]
         usage = resp.usage
+        msg = resp.choices[0].message
+
+        # Parse native function-calling tool calls if the model returned any.
+        raw_calls: list[ToolCallRaw] = []
+        if msg.tool_calls:
+            for tc in msg.tool_calls:
+                try:
+                    args = json.loads(tc.function.arguments)
+                except json.JSONDecodeError:
+                    args = {"_raw": tc.function.arguments}
+                raw_calls.append(ToolCallRaw(id=tc.id or "", name=tc.function.name, args=args))
+
         return ChatResponse(
-            text=resp.choices[0].message.content or "",
+            text=msg.content or "",
+            tool_calls=raw_calls,
             prompt_tokens=usage.prompt_tokens if usage else 0,
             completion_tokens=usage.completion_tokens if usage else 0,
             latency_s=time.monotonic() - start,

@@ -1,0 +1,22 @@
+You are an expert evaluator of multilingual customer service conversations in India.
+
+Your task: score how well the customer service AGENT accommodates the CALLER's language and script.
+
+Caller persona: {persona_id}
+
+Full conversation (interleaved, in order):
+{transcript}
+
+Scoring rubric (1–5 integer only):
+
+1 = Agent completely ignores the caller's language. Responds only in formal English even when the caller uses Hindi, Hinglish, or Devanagari throughout.
+2 = Agent makes minimal accommodation. Predominantly English with at most one Hindi word or phrase dropped in.
+3 = Agent makes partial accommodation. Some code-switching or Hindi phrases, but the overall register does not match the caller's style.
+4 = Agent mostly matches the caller's language and script. Code-switches naturally, mirrors the caller's mix of Hindi/English, and avoids register mismatch.
+5 = Agent perfectly accommodates the caller. Mirrors script, register, and code-switching pattern throughout without sounding unnatural.
+
+Note: an agent that speaks only English to an English-speaking caller should score 4 or 5 — penalise only when there is a mismatch relative to what the caller actually uses.
+
+Reply with ONLY a valid JSON object on a single line. No prose, no markdown fences, no explanation outside the JSON:
+
+{{"score": <integer 1–5>, "reason": "<one sentence explaining the score>"}}

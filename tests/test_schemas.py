@@ -43,6 +43,24 @@ def test_max_turns_bounds() -> None:
         Scenario.model_validate(data)
 
 
+def test_reveal_if_is_optional() -> None:
+    """HiddenFact without reveal_if should default to empty list (no reveal)."""
+    data = _load("refund_torn_kurta.yaml")
+    for fact in data.get("hidden_facts", []):
+        fact.pop("reveal_if", None)
+    scenario = Scenario.model_validate(data)
+    for fact in scenario.hidden_facts:
+        assert fact.reveal_if == []
+
+
+def test_reveal_if_loaded_from_yaml() -> None:
+    """The updated YAML files should have reveal_if populated."""
+    scenario = Scenario.model_validate(_load("refund_torn_kurta.yaml"))
+    fact = next(f for f in scenario.hidden_facts if f.key == "order_id")
+    assert len(fact.reveal_if) > 0
+    assert "order id" in fact.reveal_if
+
+
 def test_persona_id_restricted() -> None:
     with pytest.raises(ValidationError):
         Persona.model_validate({"id": "tamil", "system_prompt": "x"})

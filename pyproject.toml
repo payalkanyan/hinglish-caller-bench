@@ -19,6 +19,9 @@ plot = ["matplotlib>=3.8"]
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.5"]
 
+[project.scripts]
+hcb = "hinglish_bench.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

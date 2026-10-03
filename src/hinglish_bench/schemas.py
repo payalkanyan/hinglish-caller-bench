@@ -10,10 +10,16 @@ Trait = Literal["impatient", "typos", "vague"]
 
 
 class HiddenFact(BaseModel):
-    """Something the caller knows but reveals only when the agent asks for it."""
+    """Something the caller knows but reveals only when the agent asks for it.
+
+    `reveal_if` is a list of lowercase substrings. If any of them appears in the
+    agent's last message (case-insensitive), the fact is revealed to the caller.
+    This is deterministic and needs no extra LLM call.
+    """
 
     key: str = Field(pattern=r"^[a-z_]+$", description="Fixed fact key, e.g. order_id")
     value: str
+    reveal_if: list[str] = Field(default_factory=list)
 
 
 class ExpectedToolCall(BaseModel):
@@ -84,3 +90,5 @@ class RunRecord(BaseModel):
     completion_tokens: int = 0
     latency_s: float = 0.0
     infra_error: str | None = None
+    # Set by the runner; Stage 3 graders never need to re-derive this.
+    end_reason: Literal["success", "escalated", "max_turns", "infra_error"] | None = None

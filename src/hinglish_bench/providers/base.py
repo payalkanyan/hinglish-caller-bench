@@ -1,7 +1,7 @@
 """Provider interface and the request/response types shared by all providers."""
 
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -21,8 +21,19 @@ class ChatRequest(BaseModel):
     run_index: int = Field(default=0, ge=0)
 
 
+class ToolCallRaw(BaseModel):
+    """A tool call as returned by the provider API (before domain conversion)."""
+
+    id: str = ""  # OpenAI assigns an id; not all providers do
+    name: str
+    args: dict[str, Any] = Field(default_factory=dict)
+
+
 class ChatResponse(BaseModel):
     text: str
+    # Native function-calling results. Populated by OpenAICompatProvider;
+    # MockProvider responders may also return these directly.
+    tool_calls: list[ToolCallRaw] = Field(default_factory=list)
     prompt_tokens: int = 0
     completion_tokens: int = 0
     latency_s: float = 0.0
