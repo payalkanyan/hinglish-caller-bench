@@ -1,0 +1,40 @@
+id: refund_wrong_item_sent
+domain: refund
+caller_goal: >
+  You ordered over-ear headphones for Rs 1,999 but received in-ear earphones instead.
+  The box has your order ID sticker but contains a completely different product.
+  You want a full refund of Rs 1,999 to your UPI — you will buy headphones elsewhere.
+hidden_facts:
+  - key: order_id
+    value: "ORD-11007"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "arun.p@oksbi"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+      - "bank account"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-11007"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-11007"
+      amount: 1999
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-11007"
+      amount: 1999
+      status: initiated
+max_turns: 12

@@ -32,13 +32,12 @@ class MockDB:
 
     def __init__(self) -> None:
         self.orders: dict[str, dict] = {
+            # existing scenarios
             "ORD-88412": {
                 "id": "ORD-88412",
                 "product": "Floral kurta",
                 "amount": 1499,
                 "status": "delivered",
-                "customer": "Meera Iyer",
-                "city": "Bengaluru",
                 "upi": "meera.iyer@okaxis",
             },
             "ORD-77301": {
@@ -46,8 +45,141 @@ class MockDB:
                 "product": "Men's jeans",
                 "amount": 899,
                 "status": "in_transit",
-                "customer": "Arjun Sharma",
-                "city": "Delhi",
+                "upi": None,
+            },
+            # refund scenarios
+            "ORD-11001": {
+                "id": "ORD-11001",
+                "product": "Cotton shirt (M)",
+                "amount": 899,
+                "status": "delivered",
+                "upi": "priya.v@oksbi",
+            },
+            "ORD-11002": {
+                "id": "ORD-11002",
+                "product": "Running shoes",
+                "amount": 2499,
+                "status": "lost",
+                "upi": "karthik.n@okhdfc",
+            },
+            "ORD-11003": {
+                "id": "ORD-11003",
+                "product": "Phone case",
+                "amount": 349,
+                "status": "delivered",
+                "upi": "sunita.s@paytm",
+            },
+            "ORD-11004": {
+                "id": "ORD-11004",
+                "product": "Silk scarf",
+                "amount": 599,
+                "status": "delivered",
+                "upi": "amit.k@phonepe",
+            },
+            "ORD-11005": {
+                "id": "ORD-11005",
+                "product": "Winter jacket",
+                "amount": 1199,
+                "status": "cancelled",
+                "upi": "deepa.m@okicici",
+            },
+            "ORD-11006": {
+                "id": "ORD-11006",
+                "product": "Banarasi saree",
+                "amount": 3499,
+                "status": "returned",
+                "upi": "rekha.s@okaxis",
+            },
+            "ORD-11007": {
+                "id": "ORD-11007",
+                "product": "Headphones",
+                "amount": 1999,
+                "status": "delivered",
+                "upi": "arun.p@oksbi",
+            },
+            "ORD-11008": {
+                "id": "ORD-11008",
+                "product": "Organic mangoes",
+                "amount": 599,
+                "status": "delivered",
+                "upi": "fatima.k@paytm",
+            },
+            "ORD-11009": {
+                "id": "ORD-11009",
+                "product": "Prescribed medicine",
+                "amount": 450,
+                "status": "delivered",
+                "upi": "vijay.r@okhdfc",
+            },
+            # delivery scenarios
+            "ORD-22001": {
+                "id": "ORD-22001",
+                "product": "Gaming console",
+                "amount": 29999,
+                "status": "lost",
+                "upi": None,
+            },
+            "ORD-22002": {
+                "id": "ORD-22002",
+                "product": "Shoes + belt combo",
+                "amount": 4499,
+                "status": "delivered",
+                "upi": None,
+            },
+            "ORD-22003": {
+                "id": "ORD-22003",
+                "product": "Silk saree",
+                "amount": 5999,
+                "status": "delivered",
+                "upi": None,
+            },
+            "ORD-22004": {
+                "id": "ORD-22004",
+                "product": "Smartphone",
+                "amount": 19999,
+                "status": "delivered",
+                "upi": None,
+            },
+            "ORD-22005": {
+                "id": "ORD-22005",
+                "product": "Laptop bag",
+                "amount": 1499,
+                "status": "in_transit",
+                "upi": None,
+            },
+            "ORD-22006": {
+                "id": "ORD-22006",
+                "product": "Crockery set",
+                "amount": 2199,
+                "status": "in_transit",
+                "upi": None,
+            },
+            "ORD-22007": {
+                "id": "ORD-22007",
+                "product": "Winter jacket",
+                "amount": 2799,
+                "status": "in_transit",
+                "upi": None,
+            },
+            "ORD-22008": {
+                "id": "ORD-22008",
+                "product": "Kurta",
+                "amount": 1199,
+                "status": "in_transit",
+                "upi": None,
+            },
+            "ORD-22009": {
+                "id": "ORD-22009",
+                "product": "Grocery order",
+                "amount": 899,
+                "status": "in_transit",
+                "upi": None,
+            },
+            "ORD-22010": {
+                "id": "ORD-22010",
+                "product": "Urgent medicines",
+                "amount": 799,
+                "status": "in_transit",
                 "upi": None,
             },
         }
@@ -55,11 +187,64 @@ class MockDB:
         self.emis: dict[str, dict] = {
             "LN-4471032": {
                 "loan_id": "LN-4471032",
-                "borrower": "Ramesh Gupta",
                 "amount": 4250,
                 "due_day": 5,
                 "status": "active",
-            }
+            },
+            "LN-5000001": {
+                "loan_id": "LN-5000001",
+                "amount": 3200,
+                "due_day": 3,
+                "status": "active",
+            },
+            "LN-5000002": {
+                "loan_id": "LN-5000002",
+                "amount": 7500,
+                "due_day": 1,
+                "status": "active",
+            },
+            "LN-5000003": {
+                "loan_id": "LN-5000003",
+                "amount": 5000,
+                "due_day": 10,
+                "status": "overdue",
+            },
+            "LN-5000004": {
+                "loan_id": "LN-5000004",
+                "amount": 2800,
+                "due_day": 15,
+                "status": "bounced",
+            },
+            "LN-5000005": {
+                "loan_id": "LN-5000005",
+                "amount": 12000,
+                "due_day": 5,
+                "status": "active",
+            },
+            "LN-5000006": {
+                "loan_id": "LN-5000006",
+                "amount": 8500,
+                "due_day": 7,
+                "status": "active",
+            },
+            "LN-5000007": {
+                "loan_id": "LN-5000007",
+                "amount": 6000,
+                "due_day": 8,
+                "status": "active",
+            },
+            "LN-5000008": {
+                "loan_id": "LN-5000008",
+                "amount": 4500,
+                "due_day": 20,
+                "status": "active",
+            },
+            "LN-5000009": {
+                "loan_id": "LN-5000009",
+                "amount": 9000,
+                "due_day": 12,
+                "status": "disputed",
+            },
         }
         self.deliveries: dict[str, dict] = {
             "ORD-77301": {
@@ -67,7 +252,67 @@ class MockDB:
                 "status": "in_transit",
                 "eta": "2026-10-07",
                 "carrier": "Delhivery",
-            }
+            },
+            "ORD-22001": {
+                "order_id": "ORD-22001",
+                "status": "lost",
+                "eta": None,
+                "carrier": "FedEx",
+            },
+            "ORD-22002": {
+                "order_id": "ORD-22002",
+                "status": "delivered",
+                "eta": "2026-09-30",
+                "carrier": "BlueDart",
+            },
+            "ORD-22003": {
+                "order_id": "ORD-22003",
+                "status": "delivered",
+                "eta": "2026-09-28",
+                "carrier": "DTDC",
+            },
+            "ORD-22004": {
+                "order_id": "ORD-22004",
+                "status": "delivered",
+                "eta": "2026-09-25",
+                "carrier": "Delhivery",
+            },
+            "ORD-22005": {
+                "order_id": "ORD-22005",
+                "status": "in_transit",
+                "eta": "2026-09-12",
+                "carrier": "Delhivery",
+            },
+            "ORD-22006": {
+                "order_id": "ORD-22006",
+                "status": "in_transit",
+                "eta": "2026-10-05",
+                "carrier": "Ekart",
+            },
+            "ORD-22007": {
+                "order_id": "ORD-22007",
+                "status": "out_for_delivery",
+                "eta": "2026-10-03",
+                "carrier": "Shadowfax",
+            },
+            "ORD-22008": {
+                "order_id": "ORD-22008",
+                "status": "in_transit",
+                "eta": "2026-10-06",
+                "carrier": "DTDC",
+            },
+            "ORD-22009": {
+                "order_id": "ORD-22009",
+                "status": "in_transit",
+                "eta": "2026-10-04",
+                "carrier": "Delhivery",
+            },
+            "ORD-22010": {
+                "order_id": "ORD-22010",
+                "status": "in_transit",
+                "eta": "2026-10-08",
+                "carrier": "BlueDart",
+            },
         }
         self.escalations: list[dict] = []
 

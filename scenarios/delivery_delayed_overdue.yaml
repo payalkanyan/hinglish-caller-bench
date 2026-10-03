@@ -1,0 +1,30 @@
+id: delivery_delayed_overdue
+domain: delivery
+caller_goal: >
+  You ordered a laptop bag for Rs 1,499 and the delivery was promised within 5 days but
+  it has now been 3 weeks with no sign of the package. Every day the app just shows
+  "in transit". Please check the current status and then escalate this — you need the
+  bag urgently for work and want a resolution or refund.
+hidden_facts:
+  - key: order_id
+    value: "ORD-22005"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+expected_tool_calls:
+  - name: track_delivery
+    args:
+      order_id: "ORD-22005"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [track_delivery, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

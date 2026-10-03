@@ -143,32 +143,38 @@ async def run_batch(
     tools: list[ToolDef],
     runs: int = 3,
     results_path: Path | None = None,
+    max_concurrency: int = 1,
 ) -> list[RunRecord]:
     """Run all (scenario, persona, run_index) combinations, skipping completed ones.
 
     `agent_factory` returns a fresh (agent, db_getter) pair for each run so every
     run starts with a clean DB state.
+
+    `max_concurrency` limits simultaneous in-flight conversations. Rate limiting is
+    handled by the TokenBucket inside ProviderPool (shared per base_url/key pair).
     """
+    import asyncio
+
     completed = load_completed_keys(results_path) if results_path else set()
-    records: list[RunRecord] = []
+    sem = asyncio.Semaphore(max_concurrency)
 
-    for scenario in scenarios:
-        for persona in personas:
-            for run_idx in range(runs):
-                key = (scenario.id, persona.id, caller_role.model, run_idx)
-                if key in completed:
-                    continue
-                agent, db_getter = agent_factory()
-                record = await run_one(
-                    scenario=scenario,
-                    persona=persona,
-                    caller_role=caller_role,
-                    agent=agent,
-                    db_getter=db_getter,
-                    tools=tools,
-                    run_index=run_idx,
-                    results_path=results_path,
-                )
-                records.append(record)
+    async def _one(scenario: Scenario, persona: Persona, run_idx: int) -> RunRecord | None:
+        key = (scenario.id, persona.id, caller_role.model, run_idx)
+        if key in completed:
+            return None
+        async with sem:
+            agent, db_getter = agent_factory()
+            return await run_one(
+                scenario=scenario,
+                persona=persona,
+                caller_role=caller_role,
+                agent=agent,
+                db_getter=db_getter,
+                tools=tools,
+                run_index=run_idx,
+                results_path=results_path,
+            )
 
-    return records
+    tasks = [_one(sc, pe, ri) for sc in scenarios for pe in personas for ri in range(runs)]
+    results = await asyncio.gather(*tasks)
+    return [r for r in results if r is not None]

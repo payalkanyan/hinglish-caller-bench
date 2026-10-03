@@ -1,0 +1,33 @@
+id: emi_shift_to_15th
+domain: emi_reminder
+caller_goal: >
+  Your personal loan EMI is currently due on the 3rd of each month but your salary
+  gets credited on the 12th, so you always end up paying late. You want the due date
+  moved to the 15th and you need the agent to confirm the new date before you hang up.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000001"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000001"
+  - name: reschedule_emi
+    args:
+      loan_id: "LN-5000001"
+      new_due_day: 15
+precedence:
+  - [check_emi_status, reschedule_emi]
+forbidden:
+  - name: reschedule_emi
+    max_count: 1
+success_state:
+  emis:
+    - loan_id: "LN-5000001"
+      due_day: 15
+max_turns: 12

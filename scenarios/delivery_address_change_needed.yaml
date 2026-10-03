@@ -1,0 +1,30 @@
+id: delivery_address_change_needed
+domain: delivery
+caller_goal: >
+  Your grocery order is out for delivery tomorrow but you will be at your parents' house
+  across town — not at the address you gave when ordering. You need the delivery address
+  updated before the courier attempts delivery. The automated system cannot change
+  addresses, so please ask the agent to escalate this to someone who can.
+hidden_facts:
+  - key: order_id
+    value: "ORD-22009"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+expected_tool_calls:
+  - name: track_delivery
+    args:
+      order_id: "ORD-22009"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [track_delivery, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

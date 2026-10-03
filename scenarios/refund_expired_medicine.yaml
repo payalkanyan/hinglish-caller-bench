@@ -1,0 +1,40 @@
+id: refund_expired_medicine
+domain: refund
+caller_goal: >
+  You ordered prescribed medicine for Rs 450 and when it arrived you noticed the expiry
+  date was two weeks in the past. You cannot use expired medicine and this is a health risk.
+  You want a full refund of Rs 450 to your UPI.
+hidden_facts:
+  - key: order_id
+    value: "ORD-11009"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "vijay.r@okhdfc"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+      - "bank account"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-11009"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-11009"
+      amount: 450
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-11009"
+      amount: 450
+      status: initiated
+max_turns: 12

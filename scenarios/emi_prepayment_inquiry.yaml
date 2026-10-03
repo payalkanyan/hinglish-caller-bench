@@ -1,0 +1,31 @@
+id: emi_prepayment_inquiry
+domain: emi_reminder
+caller_goal: >
+  You received a large bonus at work and want to prepay all your remaining loan EMIs in
+  one shot to close the account early. You want to know the exact outstanding amount,
+  whether any prepayment charges apply, and how to proceed. Ask the agent to connect
+  you with the loan department since prepayment requires special processing.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000005"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000005"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [check_emi_status, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

@@ -1,0 +1,30 @@
+id: delivery_damaged_carrier
+domain: delivery
+caller_goal: >
+  You ordered a crockery set for Rs 2,199 and the delivery person handed you a box that
+  was visibly crushed — you could hear broken pieces inside. You took photos before
+  opening it. Please check the delivery status and then escalate so someone can arrange
+  a replacement shipment or refund for the carrier-damaged goods.
+hidden_facts:
+  - key: order_id
+    value: "ORD-22006"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+expected_tool_calls:
+  - name: track_delivery
+    args:
+      order_id: "ORD-22006"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [track_delivery, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

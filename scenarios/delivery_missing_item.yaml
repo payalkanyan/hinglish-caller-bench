@@ -1,0 +1,30 @@
+id: delivery_missing_item
+domain: delivery
+caller_goal: >
+  You ordered a combo box containing shoes and a matching belt for Rs 4,499. The box
+  arrived and was properly sealed, but the belt was missing inside. You want the agent
+  to check your delivery status and then escalate this to get the missing item sent
+  or a partial refund for the belt.
+hidden_facts:
+  - key: order_id
+    value: "ORD-22002"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+expected_tool_calls:
+  - name: track_delivery
+    args:
+      order_id: "ORD-22002"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [track_delivery, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

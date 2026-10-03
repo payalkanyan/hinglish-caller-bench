@@ -1,0 +1,40 @@
+id: refund_shoes_never_arrived
+domain: refund
+caller_goal: >
+  You ordered a pair of running shoes for Rs 2,499 twelve days ago and the order still
+  hasn't arrived. The app shows "out for delivery" since day 5 but nothing came.
+  You want a full refund of Rs 2,499 to your UPI — you no longer want the shoes.
+hidden_facts:
+  - key: order_id
+    value: "ORD-11002"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "karthik.n@okhdfc"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+      - "bank account"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-11002"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-11002"
+      amount: 2499
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-11002"
+      amount: 2499
+      status: initiated
+max_turns: 12

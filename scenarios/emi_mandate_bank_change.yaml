@@ -1,0 +1,31 @@
+id: emi_mandate_bank_change
+domain: emi_reminder
+caller_goal: >
+  You changed your salary account to a different bank last month and need the loan EMI
+  auto-debit mandate updated to your new account. The old account will be closed soon.
+  This is a bank-level change that needs a human agent — please get yourself connected
+  to someone who can process the mandate update.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000008"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000008"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [check_emi_status, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

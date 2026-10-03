@@ -1,0 +1,33 @@
+id: emi_shift_to_28th
+domain: emi_reminder
+caller_goal: >
+  Your personal loan EMI is due on the 1st of every month but you are a pensioner and
+  your pension arrives around the 26th or 27th. By the 1st you still haven't received it,
+  which causes late payment marks on your credit report. Please move the due date to the 28th.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000002"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000002"
+  - name: reschedule_emi
+    args:
+      loan_id: "LN-5000002"
+      new_due_day: 28
+precedence:
+  - [check_emi_status, reschedule_emi]
+forbidden:
+  - name: reschedule_emi
+    max_count: 1
+success_state:
+  emis:
+    - loan_id: "LN-5000002"
+      due_day: 28
+max_turns: 12

@@ -160,23 +160,140 @@ async def _run_demo() -> None:
 
 
 # ------------------------------------------------------------------ #
-# hcb run (stub — implemented in Stage 4)                              #
+# hcb run                                                              #
 # ------------------------------------------------------------------ #
 
 
 @app.command()
-def run(  # noqa: B008
-    agent: str = typer.Option(..., help="Python import path to an AgentUnderTest class."),
-    models: list[str] = typer.Option(["mock"], help="Model IDs to test."),  # noqa: B008
-    runs: int = typer.Option(3, help="Runs per (scenario, persona, model)."),
-    personas: str = typer.Option("all", help="Comma-separated persona IDs or 'all'."),
+def run(
     scenarios_dir: Path = typer.Option(  # noqa: B008
         Path("scenarios"), help="Directory of scenario YAML files."
     ),
+    results_dir: Path = typer.Option(  # noqa: B008
+        Path("results"), help="Directory to write runs.jsonl into."
+    ),
+    n_scenarios: int = typer.Option(10, help="Number of scenarios (stratified sample)."),  # noqa: B008
+    all_scenarios: bool = typer.Option(False, "--all-scenarios", help="Use all 30 scenarios."),  # noqa: B008
+    personas_opt: str = typer.Option(  # noqa: B008
+        "all", "--personas", help="Comma-separated persona IDs or 'all'."
+    ),
+    runs: int = typer.Option(3, help="Runs per (scenario, persona)."),  # noqa: B008
+    caller_model: str = typer.Option(  # noqa: B008
+        "llama-3.3-70b-versatile", help="Groq model ID for the caller simulator."
+    ),
+    agent_model: str = typer.Option(  # noqa: B008
+        "llama-3.3-70b-versatile", help="Groq model ID for the reference agent."
+    ),
+    cache_dir: Path = typer.Option(Path(".cache"), help="Response cache directory."),  # noqa: B008
+    concurrency: int = typer.Option(4, help="Max simultaneous conversations."),  # noqa: B008
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print run plan and exit."),  # noqa: B008
 ) -> None:
-    """Run the full benchmark. (Implemented in Stage 4.)"""
-    typer.echo("hcb run is not yet implemented. Coming in Stage 4.")
-    raise typer.Exit(code=0)
+    """Run the reference-agent baseline. Requires GROQ_API_KEY in environment."""
+    asyncio.run(
+        _run_benchmark(
+            scenarios_dir=scenarios_dir,
+            results_dir=results_dir,
+            n_scenarios=n_scenarios,
+            all_scenarios=all_scenarios,
+            personas_opt=personas_opt,
+            runs=runs,
+            caller_model=caller_model,
+            agent_model=agent_model,
+            cache_dir=cache_dir,
+            concurrency=concurrency,
+            dry_run=dry_run,
+        )
+    )
+
+
+async def _run_benchmark(
+    *,
+    scenarios_dir: Path,
+    results_dir: Path,
+    n_scenarios: int,
+    all_scenarios: bool,
+    personas_opt: str,
+    runs: int,
+    caller_model: str,
+    agent_model: str,
+    cache_dir: Path,
+    concurrency: int,
+    dry_run: bool,
+) -> None:
+    from hinglish_bench.config import ProviderPool, RoleConfig
+    from hinglish_bench.examples.reference_agent import TOOL_DEFS, MockDB, ReferenceAgent
+    from hinglish_bench.personas import PERSONAS
+    from hinglish_bench.runner import run_batch
+    from hinglish_bench.scenarios import load_scenarios_dir, select_scenarios
+
+    # 1. Load + validate corpus first (before any provider construction)
+    scenarios = load_scenarios_dir(scenarios_dir)
+
+    # 2. Select scenarios
+    selected = scenarios if all_scenarios else select_scenarios(scenarios, n_scenarios)
+
+    # 3. Resolve personas
+    if personas_opt.strip().lower() == "all":
+        persona_list = list(PERSONAS.values())
+    else:
+        ids = [p.strip() for p in personas_opt.split(",") if p.strip()]
+        missing = [i for i in ids if i not in PERSONAS]
+        if missing:
+            typer.echo(f"Unknown persona IDs: {missing}", err=True)
+            raise typer.Exit(code=1)
+        persona_list = [PERSONAS[i] for i in ids]
+
+    # 4. Dry-run: print plan and exit (deterministic, no provider construction)
+    total_runs = len(selected) * len(persona_list) * runs
+    if dry_run:
+        typer.echo("=== DRY RUN ===")
+        typer.echo(f"Scenarios ({len(selected)}):")
+        for sc in selected:
+            typer.echo(f"  {sc.id}  [{sc.domain}]")
+        typer.echo(f"Personas ({len(persona_list)}): {[p.id for p in persona_list]}")
+        typer.echo(f"Runs per combination: {runs}")
+        typer.echo(f"Caller model: {caller_model}")
+        typer.echo(f"Agent model:  {agent_model}")
+        typer.echo(f"Concurrency:  {concurrency}")
+        typer.echo(f"Total conversations: {total_runs}")
+        return
+
+    # 5. Build provider pool + roles (25 RPM — below Groq free-tier 30 to leave headroom)
+    pool = ProviderPool(cache_dir=cache_dir)
+    caller_cfg = RoleConfig(model=caller_model, provider="groq", requests_per_minute=25)
+    agent_cfg = RoleConfig(model=agent_model, provider="groq", requests_per_minute=25)
+    caller_role = pool.role(name="caller", cfg=caller_cfg)
+    agent_role = pool.role(name="agent", cfg=agent_cfg)
+
+    # 6. Agent factory: fresh MockDB per run (reference-agent baseline)
+    def agent_factory():  # type: ignore[return]
+        db = MockDB()
+        agent = ReferenceAgent(agent_role, db)
+        return agent, db.dump
+
+    # 7. Run
+    results_path = results_dir / "runs.jsonl"
+    typer.echo(
+        f"Running {total_runs} conversations "
+        f"({len(selected)} scenarios × {len(persona_list)} personas × {runs} runs) "
+        f"[reference-agent baseline] …"
+    )
+    records = await run_batch(
+        scenarios=selected,
+        personas=persona_list,
+        caller_role=caller_role,
+        agent_factory=agent_factory,
+        tools=TOOL_DEFS,
+        runs=runs,
+        results_path=results_path,
+        max_concurrency=concurrency,
+    )
+
+    # 8. Summary
+    n_success = sum(1 for r in records if r.end_reason == "success")
+    n_total = len(records)
+    typer.echo(f"Ran {n_total} conversations. Success: {n_success}/{n_total}.")
+    typer.echo(f"Results → {results_path}")
 
 
 # ------------------------------------------------------------------ #

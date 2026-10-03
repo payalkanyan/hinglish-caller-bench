@@ -1,0 +1,40 @@
+id: refund_wrong_size_shirt
+domain: refund
+caller_goal: >
+  You ordered a medium-size cotton shirt for Rs 899 but received an extra-large instead.
+  The tag inside clearly says XL, not M. You want a full refund of Rs 899 to your UPI —
+  you do not want an exchange because the product quality looked poor.
+hidden_facts:
+  - key: order_id
+    value: "ORD-11001"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "priya.v@oksbi"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+      - "bank account"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-11001"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-11001"
+      amount: 899
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-11001"
+      amount: 899
+      status: initiated
+max_turns: 12
