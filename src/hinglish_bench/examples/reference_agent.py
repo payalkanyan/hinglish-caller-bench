@@ -11,9 +11,15 @@ casing for MockProvider — the agent always follows the same code path.
 
 from __future__ import annotations
 
+import json
+
 from hinglish_bench.agent import AgentTurn, ToolDef
 from hinglish_bench.providers.base import ChatMessage, Role
 from hinglish_bench.schemas import ToolCall, Turn
+
+# Safety cap on tool-call rounds within a single agent turn, so a model that loops
+# on tool calls cannot spin forever.
+MAX_TOOL_ROUNDS = 6
 
 # ------------------------------------------------------------------ #
 # Mock database                                                        #
@@ -461,13 +467,28 @@ TOOL_DEFS: list[ToolDef] = [
 # ------------------------------------------------------------------ #
 
 
+def _to_openai_tool(t: ToolDef) -> dict:
+    """Convert a ToolDef into the OpenAI function-tool schema the API expects."""
+    return {
+        "type": "function",
+        "function": {
+            "name": t.name,
+            "description": t.description,
+            "parameters": t.parameters,
+        },
+    }
+
+
 class ReferenceAgent:
     """An agent backed by an LLM Role and a MockDB.
 
-    respond() makes exactly one LLM call. The LLM (or mock) decides which
-    tools to call via the tool_calls field of the ChatResponse. The agent
-    then executes those calls against self.db and returns the results.
-    There is no special-casing for MockProvider.
+    respond() runs a tool-use loop: it offers the tool schemas to the model, and
+    whenever the model requests tool calls it executes them against self.db, feeds
+    the results back as tool messages, and calls the model again. The loop ends
+    when the model replies with plain text (or MAX_TOOL_ROUNDS is hit). This lets
+    the model see tool results and act on them — e.g. refund the amount it looked
+    up — instead of narrating actions it never took. No special-casing for
+    MockProvider: the same path runs for mock and real providers.
     """
 
     def __init__(self, role: Role, db: MockDB | None = None) -> None:
@@ -480,18 +501,59 @@ class ReferenceAgent:
             role = "user" if turn.speaker == "caller" else "assistant"
             messages.append(ChatMessage(role=role, content=turn.text))
 
-        resp = await self._role.chat(messages, temperature=0.0)
-
-        # Execute each tool call the LLM requested, in order.
+        tool_schemas = [_to_openai_tool(t) for t in tools]
         executed: list[ToolCall] = []
-        for tc in resp.tool_calls:
-            _run_tool(self.db, tc.name, tc.args)  # side-effect on self.db
-            executed.append(ToolCall(name=tc.name, args=tc.args))
+        prompt_tokens = completion_tokens = 0
+        latency = 0.0
+        text = ""
+        finish_reason: str | None = None
+
+        for _ in range(MAX_TOOL_ROUNDS):
+            resp = await self._role.chat(messages, temperature=0.0, tools=tool_schemas)
+            prompt_tokens += resp.prompt_tokens
+            completion_tokens += resp.completion_tokens
+            latency += resp.latency_s
+            text = resp.text
+            finish_reason = resp.finish_reason
+
+            if not resp.tool_calls:
+                break
+
+            # Give each requested call a stable id, shared between the assistant
+            # tool-call message and its matching tool-result message.
+            ids = [tc.id or f"call_{i}" for i, tc in enumerate(resp.tool_calls)]
+            messages.append(
+                ChatMessage(
+                    role="assistant",
+                    content=resp.text,
+                    tool_calls=[
+                        {
+                            "id": ids[i],
+                            "type": "function",
+                            "function": {"name": tc.name, "arguments": json.dumps(tc.args)},
+                            # Echo provider passthrough (e.g. Gemini thought_signature).
+                            **(tc.extra or {}),
+                        }
+                        for i, tc in enumerate(resp.tool_calls)
+                    ],
+                )
+            )
+            for i, tc in enumerate(resp.tool_calls):
+                result = _run_tool(self.db, tc.name, tc.args)  # side-effect on self.db
+                executed.append(ToolCall(name=tc.name, args=tc.args))
+                messages.append(
+                    ChatMessage(
+                        role="tool",
+                        tool_call_id=ids[i],
+                        content=json.dumps(result),
+                    )
+                )
 
         return AgentTurn(
-            text=resp.text,
+            text=text,
             tool_calls=executed,
-            prompt_tokens=resp.prompt_tokens,
-            completion_tokens=resp.completion_tokens,
-            latency_s=resp.latency_s,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_s=latency,
+            finish_reason=finish_reason,
         )

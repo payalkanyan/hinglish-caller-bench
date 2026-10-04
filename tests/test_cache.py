@@ -61,4 +61,11 @@ def test_entry_holds_only_response_fields(tmp_path: Path) -> None:
     stored_files = list(tmp_path.rglob("*.json"))
     assert len(stored_files) == 1
     stored = json.loads(stored_files[0].read_text(encoding="utf-8"))
-    assert set(stored) == {"text", "prompt_tokens", "completion_tokens", "latency_s"}
+    assert set(stored) == {
+        "text",
+        "tool_calls",
+        "prompt_tokens",
+        "completion_tokens",
+        "latency_s",
+        "finish_reason",
+    }

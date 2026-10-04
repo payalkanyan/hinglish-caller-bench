@@ -19,6 +19,7 @@ from hinglish_bench.personas import PERSONAS
 from hinglish_bench.providers.base import ChatResponse, Role, ToolCallRaw
 from hinglish_bench.providers.mock import MockProvider
 from hinglish_bench.runner import (
+    caller_said_goodbye,
     check_success,
     load_completed_keys,
     run_one,
@@ -122,6 +123,9 @@ def _make_happy_responder(scenario_id: str):
         all_content = " ".join(m.content for m in req.messages)
 
         if is_agent:
+            # Tool results have been fed back — reply with final text to end the loop.
+            if any(m.role == "tool" for m in req.messages):
+                return "All done. Is there anything else?"
             if scenario_id == "refund_torn_kurta" and "ORD-88412" in all_content:
                 return ChatResponse(
                     text="Refund processed.",
@@ -231,9 +235,11 @@ def test_wrong_order_id_does_not_succeed() -> None:
         system = req.messages[0].content if req.messages else ""
         is_agent = "customer service agent" in system.lower()
         if is_agent:
+            if any(m.role == "tool" for m in req.messages):
+                return "Refund done."
             # Always refund the WRONG order.
             return ChatResponse(
-                text="Refund done.",
+                text="",
                 tool_calls=[
                     ToolCallRaw(
                         name="initiate_refund",
@@ -287,9 +293,11 @@ def test_duplicate_tool_call_captured_in_transcript() -> None:
         system = req.messages[0].content if req.messages else ""
         is_agent = "customer service agent" in system.lower()
         if is_agent:
+            if any(m.role == "tool" for m in req.messages):
+                return "I have processed the refund (twice, mistakenly)."
             # Two initiate_refund calls in a single response — the forbidden duplicate.
             return ChatResponse(
-                text="I have processed the refund (twice, mistakenly).",
+                text="",
                 tool_calls=[
                     ToolCallRaw(
                         name="initiate_refund",
@@ -353,6 +361,122 @@ def test_checkpoint_round_trip(tmp_path: Path) -> None:
     assert ("s1", "english", "mock", 0) in keys
     assert ("s1", "english", "mock", 1) in keys
     assert ("s1", "english", "mock", 2) not in keys
+
+
+# ------------------------------------------------------------------ #
+# Goodbye detection                                                    #
+# ------------------------------------------------------------------ #
+
+
+def test_caller_said_goodbye_detects_farewells() -> None:
+    assert caller_said_goodbye("Goodbye!") is True
+    assert caller_said_goodbye("Sure, I will. Goodbye.") is True
+    assert caller_said_goodbye("ok bye") is True
+    assert caller_said_goodbye("अलविदा") is True
+    # No false positives mid-conversation.
+    assert caller_said_goodbye("My order ID is ORD-88412.") is False
+    assert caller_said_goodbye("I want a refund, maybe tomorrow.") is False
+    assert caller_said_goodbye("Thank you for checking.") is False
+
+
+def test_run_one_ends_when_caller_says_goodbye() -> None:
+    """A caller goodbye ends the call immediately — no endless farewell loop."""
+    scenario = _refund_scenario()
+
+    def responder(req):
+        system = req.messages[0].content if req.messages else ""
+        is_agent = "customer service agent" in system.lower()
+        if is_agent:
+            return "Is there anything else?"
+        return "No, that's all. Goodbye!"  # caller ends on the first turn
+
+    mock = MockProvider(responder)
+    db = MockDB()
+    agent = ReferenceAgent(Role("agent", mock, "mock"), db)
+    record = asyncio.run(
+        run_one(
+            scenario=scenario,
+            persona=PERSONAS["english"],
+            caller_role=Role("caller", mock, "mock"),
+            agent=agent,
+            db_getter=db.dump,
+            tools=TOOL_DEFS,
+            run_index=0,
+        )
+    )
+    assert record.end_reason == "caller_ended"
+    # Stopped on the caller's goodbye, before the agent traded another farewell.
+    assert record.turns[-1].speaker == "caller"
+    assert len(record.turns) == 1
+
+
+# ------------------------------------------------------------------ #
+# Agent tool-use loop                                                  #
+# ------------------------------------------------------------------ #
+
+
+def test_agent_tool_loop_feeds_results_back() -> None:
+    """The agent calls a tool, sees the result fed back, then produces final text."""
+    tool_msg_counts: list[int] = []
+
+    def responder(req):
+        system = req.messages[0].content if req.messages else ""
+        is_agent = "customer service agent" in system.lower()
+        if not is_agent:
+            return "My order ID is ORD-88412."
+        n_tool_msgs = sum(1 for m in req.messages if m.role == "tool")
+        tool_msg_counts.append(n_tool_msgs)
+        if n_tool_msgs:
+            return "Your order is confirmed."
+        return ChatResponse(
+            text="",
+            tool_calls=[ToolCallRaw(name="lookup_order", args={"order_id": "ORD-88412"})],
+        )
+
+    mock = MockProvider(responder)
+    db = MockDB()
+    agent = ReferenceAgent(Role("agent", mock, "mock"), db)
+    turn = asyncio.run(
+        agent.respond([Turn(speaker="caller", text="My order ID is ORD-88412.")], TOOL_DEFS)
+    )
+    assert [tc.name for tc in turn.tool_calls] == ["lookup_order"]
+    assert turn.text == "Your order is confirmed."
+    # Two rounds: first sees no tool results, second sees the fed-back result.
+    assert tool_msg_counts == [0, 1]
+
+
+def test_empty_agent_turn_is_logged(caplog) -> None:
+    """A blank agent reply is logged with its finish_reason, not silently dropped."""
+    import logging
+
+    scenario = _refund_scenario()
+
+    def responder(req):
+        system = req.messages[0].content if req.messages else ""
+        is_agent = "customer service agent" in system.lower()
+        if is_agent:
+            return ChatResponse(text="", finish_reason="content_filter")
+        return "I need help with ORD-88412."
+
+    mock = MockProvider(responder)
+    db = MockDB()
+    agent = ReferenceAgent(Role("agent", mock, "mock"), db)
+    with caplog.at_level(logging.WARNING, logger="hinglish_bench.runner"):
+        asyncio.run(
+            run_one(
+                scenario=scenario,
+                persona=PERSONAS["english"],
+                caller_role=Role("caller", mock, "mock"),
+                agent=agent,
+                db_getter=db.dump,
+                tools=TOOL_DEFS,
+                run_index=0,
+            )
+        )
+    assert any(
+        "Empty agent turn" in r.getMessage() and "content_filter" in r.getMessage()
+        for r in caplog.records
+    )
 
 
 def test_checkpoint_skip_completed(tmp_path: Path) -> None:

@@ -27,6 +27,8 @@ class AgentTurn(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     latency_s: float = 0.0
+    # Why the model's final call stopped — used to explain an empty text turn.
+    finish_reason: str | None = None
 
 
 class AgentUnderTest(Protocol):

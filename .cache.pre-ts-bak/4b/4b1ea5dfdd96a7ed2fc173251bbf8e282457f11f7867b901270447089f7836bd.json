@@ -1,0 +1,1 @@
+{"text": "", "tool_calls": [{"id": "call_2252744", "name": "escalate_to_human", "args": {"reason": "Customer needs to update the delivery address for a grocery order, which requires human assistance."}}], "prompt_tokens": 465, "completion_tokens": 35, "latency_s": 0.8691361670062179, "finish_reason": "tool_calls"}

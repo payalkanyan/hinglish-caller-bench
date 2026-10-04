@@ -62,6 +62,9 @@ async def _run_demo() -> None:
         is_agent = "customer service agent" in system.lower()
 
         if is_agent:
+            # Tool results fed back — give the final confirmation, ending the tool loop.
+            if any(m.role == "tool" for m in req.messages):
+                return "All done! Is there anything else I can help with?"
             # Agent: detect IDs in conversation history and produce the right tool calls.
             if "ORD-88412" in all_content:
                 return ChatResponse(
@@ -179,16 +182,17 @@ def run(
     ),
     runs: int = typer.Option(3, help="Runs per (scenario, persona)."),  # noqa: B008
     caller_model: str = typer.Option(  # noqa: B008
-        "llama-3.3-70b-versatile", help="Groq model ID for the caller simulator."
+        None, help="Model ID for the caller simulator (default depends on --provider)."
     ),
     agent_model: str = typer.Option(  # noqa: B008
-        "llama-3.3-70b-versatile", help="Groq model ID for the reference agent."
+        None, help="Model ID for the reference agent (default depends on --provider)."
     ),
+    provider: str = typer.Option("gemini", help="Provider preset: groq | gemini | openrouter."),  # noqa: B008
     cache_dir: Path = typer.Option(Path(".cache"), help="Response cache directory."),  # noqa: B008
     concurrency: int = typer.Option(4, help="Max simultaneous conversations."),  # noqa: B008
     dry_run: bool = typer.Option(False, "--dry-run", help="Print run plan and exit."),  # noqa: B008
 ) -> None:
-    """Run the reference-agent baseline. Requires GROQ_API_KEY in environment."""
+    """Run the reference-agent baseline. Requires the provider's API key in environment."""
     asyncio.run(
         _run_benchmark(
             scenarios_dir=scenarios_dir,
@@ -199,6 +203,7 @@ def run(
             runs=runs,
             caller_model=caller_model,
             agent_model=agent_model,
+            provider=provider,
             cache_dir=cache_dir,
             concurrency=concurrency,
             dry_run=dry_run,
@@ -216,6 +221,7 @@ async def _run_benchmark(
     runs: int,
     caller_model: str,
     agent_model: str,
+    provider: str,
     cache_dir: Path,
     concurrency: int,
     dry_run: bool,
@@ -225,6 +231,18 @@ async def _run_benchmark(
     from hinglish_bench.personas import PERSONAS
     from hinglish_bench.runner import run_batch
     from hinglish_bench.scenarios import load_scenarios_dir, select_scenarios
+
+    # 0. Resolve per-provider model defaults
+    _default_models: dict[str, str] = {
+        "gemini": "models/gemini-3.5-flash-lite",
+        "groq": "llama-3.3-70b-versatile",
+        "openrouter": "meta-llama/llama-3.3-70b-instruct",
+    }
+    default_model = _default_models.get(provider, "models/gemini-3.5-flash-lite")
+    if caller_model is None:
+        caller_model = default_model
+    if agent_model is None:
+        agent_model = default_model
 
     # 1. Load + validate corpus first (before any provider construction)
     scenarios = load_scenarios_dir(scenarios_dir)
@@ -252,16 +270,20 @@ async def _run_benchmark(
             typer.echo(f"  {sc.id}  [{sc.domain}]")
         typer.echo(f"Personas ({len(persona_list)}): {[p.id for p in persona_list]}")
         typer.echo(f"Runs per combination: {runs}")
+        typer.echo(f"Provider:     {provider}")
         typer.echo(f"Caller model: {caller_model}")
         typer.echo(f"Agent model:  {agent_model}")
         typer.echo(f"Concurrency:  {concurrency}")
         typer.echo(f"Total conversations: {total_runs}")
         return
 
-    # 5. Build provider pool + roles (25 RPM — below Groq free-tier 30 to leave headroom)
+    # 5. Build provider pool + roles
+    # Conservative RPM per free-tier limits: Groq 30→25, Gemini 15→14, OpenRouter 20→18
+    _rpm: dict[str, float] = {"groq": 25, "gemini": 14, "openrouter": 18}
+    rpm = _rpm.get(provider, 20)
     pool = ProviderPool(cache_dir=cache_dir)
-    caller_cfg = RoleConfig(model=caller_model, provider="groq", requests_per_minute=25)
-    agent_cfg = RoleConfig(model=agent_model, provider="groq", requests_per_minute=25)
+    caller_cfg = RoleConfig(model=caller_model, provider=provider, requests_per_minute=rpm)
+    agent_cfg = RoleConfig(model=agent_model, provider=provider, requests_per_minute=rpm)
     caller_role = pool.role(name="caller", cfg=caller_cfg)
     agent_role = pool.role(name="agent", cfg=agent_cfg)
 

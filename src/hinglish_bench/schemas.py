@@ -91,4 +91,6 @@ class RunRecord(BaseModel):
     latency_s: float = 0.0
     infra_error: str | None = None
     # Set by the runner; Stage 3 graders never need to re-derive this.
-    end_reason: Literal["success", "escalated", "max_turns", "infra_error"] | None = None
+    end_reason: (
+        Literal["success", "escalated", "max_turns", "infra_error", "caller_ended"] | None
+    ) = None

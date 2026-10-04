@@ -3,8 +3,9 @@ domain: delivery
 caller_goal: >
   You scheduled a return pickup for a kurta 4 days ago and received a confirmation SMS,
   but nobody has come to collect it. The return window is closing soon and you are worried
-  it will expire. Check the delivery status and then escalate — you need a pickup to be
-  scheduled and completed before the return window closes.
+  it will expire. Check the delivery status and then escalate this urgently — you need
+  it escalated to someone who can actually arrange the pickup before the return window
+  closes, not just logged as a complaint.
 hidden_facts:
   - key: order_id
     value: "ORD-22008"

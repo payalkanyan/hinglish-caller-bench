@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -13,7 +15,25 @@ from hinglish_bench.graders.task_completion import check_success  # noqa: F401
 from hinglish_bench.providers.base import InfraError, Role
 from hinglish_bench.schemas import Persona, RunRecord, Scenario, Turn
 
-EndReason = Literal["success", "escalated", "max_turns", "infra_error"]
+logger = logging.getLogger(__name__)
+
+EndReason = Literal["success", "escalated", "max_turns", "infra_error", "caller_ended"]
+
+# Farewell markers the caller uses to end a call, across English and romanized Hindi.
+# Matched on word boundaries so "bye" does not fire inside another word.
+_GOODBYE_TERMS = ("goodbye", "good bye", "bye", "alvida", "khuda hafiz", "phir milenge")
+_GOODBYE_RE = re.compile(
+    r"\b(" + "|".join(re.escape(t) for t in _GOODBYE_TERMS) + r")\b", re.IGNORECASE
+)
+
+
+def caller_said_goodbye(text: str) -> bool:
+    """True if the caller's message clearly signals the end of the call.
+
+    Used to stop "endless goodbye" loops where caller and agent trade farewells
+    until max_turns. Devanagari अलविदा is matched directly since \\b is ASCII-only.
+    """
+    return bool(_GOODBYE_RE.search(text)) or "अलविदा" in text
 
 
 def should_end(turns: list[Turn]) -> EndReason | None:
@@ -92,6 +112,11 @@ async def run_one(
             total_prompt += pt
             total_completion += ct
 
+            # Caller signalled the end of the call — stop before trading farewells.
+            if caller_said_goodbye(caller_turn.text):
+                end_reason = "caller_ended"
+                break
+
             # --- Agent turn ---
             agent_turn: AgentTurn = await agent.respond(turns, tools)
             turns.append(
@@ -103,6 +128,16 @@ async def run_one(
             )
             total_prompt += agent_turn.prompt_tokens
             total_completion += agent_turn.completion_tokens
+
+            # A blank agent reply is a weak-agent signal, not an infra error — record why.
+            if not agent_turn.text.strip() and not agent_turn.tool_calls:
+                logger.warning(
+                    "Empty agent turn in %s/%s run %d: finish_reason=%s",
+                    scenario.id,
+                    persona.id,
+                    run_index,
+                    agent_turn.finish_reason,
+                )
 
             # --- End-condition checks ---
             db = db_getter()

@@ -3,8 +3,9 @@ domain: delivery
 caller_goal: >
   Your winter jacket order shows "out for delivery" since this morning but it is now
   7 PM and nobody has shown up. You have been at home all day. Either the app is lying
-  or the courier did not bother attempting delivery. Please check the tracking and
-  escalate — you need a confirmed redelivery attempt tomorrow morning.
+  or the courier did not bother attempting delivery. Check the tracking status and then
+  escalate this to a senior team — you want someone who can actually coordinate with
+  the courier to call you back, not just a generic "we'll look into it".
 hidden_facts:
   - key: order_id
     value: "ORD-22007"

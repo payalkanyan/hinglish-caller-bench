@@ -12,9 +12,10 @@ def cache_key(req: ChatRequest) -> str:
     # The key holds only request content, never the API key or base URL.
     payload = {
         "model": req.model,
-        "messages": [m.model_dump() for m in req.messages],
+        "messages": [m.model_dump(exclude_none=True) for m in req.messages],
         "temperature": req.temperature,
         "seed": req.seed,
+        "tools": req.tools,
         "run_index": req.run_index,
     }
     blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)
@@ -42,9 +43,11 @@ class DiskCache:
         path.parent.mkdir(parents=True, exist_ok=True)
         stored = {
             "text": resp.text,
+            "tool_calls": [tc.model_dump() for tc in resp.tool_calls],
             "prompt_tokens": resp.prompt_tokens,
             "completion_tokens": resp.completion_tokens,
             "latency_s": resp.latency_s,
+            "finish_reason": resp.finish_reason,
         }
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(stored, ensure_ascii=False), encoding="utf-8")
