@@ -3,6 +3,30 @@
 Stress-test AI customer-service agents with simulated Indian callers speaking Hinglish,
 Hindi (Devanagari and Roman), English, and code-switching styles.
 
+## Baseline results (v0.1)
+
+6 scenarios × 5 personas × 3 runs = **90 conversations**, delivery + EMI domains.
+Caller simulator: Groq `qwen/qwen3.8-27b`. Reference agent: Gemini `gemini-3.5-flash-lite`.
+
+| Persona | Domain | Success% | Tool% | pass@3 |
+|---|---|---|---|---|
+| english | delivery | 89% | 44% | 0.67 |
+| english | emi_reminder | 100% | 33% | 1.00 |
+| hindi_devanagari | delivery | 56% | 33% | 0.33 |
+| hindi_devanagari | emi_reminder | 100% | 89% | 1.00 |
+| hindi_roman | delivery | 78% | 56% | 0.33 |
+| hindi_roman | emi_reminder | 100% | 78% | 1.00 |
+| hinglish | delivery | 89% | 0% | 0.67 |
+| hinglish | emi_reminder | 100% | 44% | 1.00 |
+| switcher | delivery | 67% | 22% | 0.33 |
+| switcher | emi_reminder | 100% | 22% | 1.00 |
+
+**Key finding:** Task success (88% overall) consistently outpaces tool correctness (42% overall).
+The agent satisfies callers without following the required tool call sequence — a process
+compliance gap that would be invisible to CSAT scores alone.
+
+---
+
 ## Install
 
 ```bash
@@ -30,12 +54,16 @@ pip install "hinglish-caller-bench[plot]"
 # 1. Smoke test with MockProvider (< 10 s, no API key)
 uv run hcb demo
 
-# 2. Run the benchmark (requires GROQ_API_KEY)
+# 2. Run the benchmark — split providers to stay within free-tier quotas
 export GROQ_API_KEY=gsk_...
-uv run hcb run --n-scenarios 10 --personas english,hinglish --runs 3
+export GEMINI_API_KEY=AIza...
+uv run hcb run \
+  --caller-provider groq --agent-provider gemini \
+  --domains delivery,emi_reminder \
+  --n-scenarios 6 --personas all --runs 3 --max-turns 8
 
-# 3. Generate summary and report
-uv run hcb report results/
+# 3. Generate summary and report (language-fit judge on a 30-record sample)
+uv run hcb report results/ --language-fit --lf-sample 30
 
 # 4. Generate bar charts (requires matplotlib)
 uv run hcb plot results/
@@ -52,75 +80,84 @@ completes in under 10 seconds. Prints a Rich table with end reason and token cou
 
 ### `hcb run [OPTIONS]`
 
-Runs the reference-agent baseline against real Groq models. Requires `GROQ_API_KEY`.
+Runs the reference-agent baseline. Supports split-provider mode to spread load across
+free-tier quotas (caller on Groq, agent on Gemini, or any combination).
 
 | Option | Default | Description |
 |---|---|---|
 | `--scenarios-dir` | `scenarios/` | Directory of scenario YAML files |
 | `--results-dir` | `results/` | Directory to write `runs.jsonl` |
 | `--n-scenarios` | `10` | Number of scenarios (stratified sample) |
-| `--all-scenarios` | off | Use all 30 scenarios |
+| `--all-scenarios` | off | Use all scenarios in the filtered set |
+| `--domains` | all | Comma-separated domain filter: `delivery,emi_reminder,refund` |
 | `--personas` | `all` | Comma-separated persona IDs or `all` |
 | `--runs` | `3` | Runs per (scenario, persona) combination |
-| `--caller-model` | `llama-3.3-70b-versatile` | Groq model for the caller simulator |
-| `--agent-model` | `llama-3.3-70b-versatile` | Groq model for the reference agent |
+| `--provider` | `gemini` | Provider for both roles: `groq \| gemini \| openrouter \| ollama` |
+| `--caller-provider` | — | Override provider for caller simulator only |
+| `--agent-provider` | — | Override provider for agent only |
+| `--caller-model` | provider default | Model ID for the caller simulator |
+| `--agent-model` | provider default | Model ID for the reference agent |
+| `--max-turns` | from scenario YAML | Override max turns per conversation |
 | `--concurrency` | `4` | Max simultaneous conversations |
 | `--dry-run` | off | Print run plan and exit (no API calls) |
+
+Runs checkpoint to `runs.jsonl` after each conversation. Re-running the same command
+resumes from where it left off; infra errors (rate limits, timeouts) are automatically
+retried on the next run.
 
 ### `hcb report [RESULTS_DIR]`
 
 Reads `runs.jsonl` and writes:
-- `results/summary.json` — pass rates, Wilson CIs, pass@k per persona × domain
-- `results/report.md` — human-readable Markdown with worst transcripts
+- `results/summary.json` — pass rates, Wilson 95% CIs, pass@k per persona × domain
+- `results/report.md` — Markdown table + 3 worst-transcript examples
 
-```bash
-uv run hcb report results/ --scenarios-dir scenarios/ --k 3
-```
+| Option | Default | Description |
+|---|---|---|
+| `--k` | `3` | k for pass@k estimator |
+| `--language-fit` | off | Run LLM language-fit judge (requires provider API key) |
+| `--lf-sample N` | all | Score only N randomly sampled records (saves quota) |
+| `--provider` | `gemini` | Provider for the language-fit judge |
+| `--judge-model` | provider default | Model for the language-fit judge |
 
 ### `hcb plot [RESULTS_DIR]`
 
-Reads `results/summary.json` and writes PNG charts to `results/plots/`. Requires the
-`plot` extra (`pip install "hinglish-caller-bench[plot]"`).
+Reads `results/summary.json` and writes PNG charts to `results/plots/`. Requires
+`pip install "hinglish-caller-bench[plot]"`.
 
 Charts produced:
 - `success_rate.png` — task success rate per persona × domain with 95% Wilson CI
 - `tool_rate.png` — tool correctness rate per persona × domain
 - `pass_at_k.png` — pass@k estimator per persona × domain (skipped if no data)
 
-```bash
-uv run hcb plot results/
-uv run hcb plot results/ --output-dir my_charts/
-```
-
 ---
 
 ## Benchmark design
 
-### Corpus vs experiment
+### Corpus
 
-**Corpus (fixed):**
-- 30 scenarios across 3 domains: 10 refund, 10 emi_reminder, 10 delivery
-- 5 personas: `english`, `hindi_devanagari`, `hindi_roman`, `hinglish`, `switcher`
-- 6 mock tools: `lookup_order`, `initiate_refund`, `check_emi_status`, `reschedule_emi`,
+- **30 scenarios** across 3 domains: 10 refund, 10 emi_reminder, 10 delivery
+- **5 personas:** `english`, `hindi_devanagari`, `hindi_roman`, `hinglish`, `switcher`
+- **6 mock tools:** `lookup_order`, `initiate_refund`, `check_emi_status`, `reschedule_emi`,
   `track_delivery`, `escalate_to_human`
 
-**Full experiment:**
-- 30 scenarios × 5 personas × 3 runs = **450 conversations**
-- `--n-scenarios`, `--personas`, and `--runs` can reduce this (e.g. 10 × 2 × 1 = 20)
+Full experiment: 30 × 5 × 3 = **450 conversations**. Use `--n-scenarios`, `--domains`,
+`--personas`, and `--runs` to run a representative subset.
 
 ### Metrics
 
-- **Task success rate** — did the agent reach the scenario's `success_state`?
-- **Tool correctness rate** — did required tools get called with correct arguments,
-  in the right order, without forbidden extras?
-- **pass@k** — unbiased estimator: probability that at least one of k runs succeeds
-- **Language-fit score** — LLM judge (1–5) of how well the agent matched the caller's
-  language register (requires a judge model; off by default)
+| Metric | What it measures |
+|---|---|
+| **Task success rate** | Did the agent reach the scenario's `success_state`? |
+| **Tool correctness rate** | Required tools called with correct args, right order, no forbidden extras |
+| **pass@k** | Unbiased estimator: P(at least one of k runs succeeds) |
+| **Language-fit score** | LLM judge (1–5): how well the agent matched the caller's language register |
 
 ### Grading
 
 Each `RunRecord` (raw transcript + DB snapshot) is graded independently after the run.
-Grades are never stored in the record itself; `hcb report` computes them from `runs.jsonl`.
+Grades are never stored in the record; `hcb report` computes them from `runs.jsonl`.
+Infrastructure errors (rate limits, provider timeouts) are excluded from all rates and
+reported separately so they never inflate failure counts.
 
 ---
 
@@ -128,7 +165,7 @@ Grades are never stored in the record itself; `hcb report` computes them from `r
 
 | File | Written by | Contents |
 |---|---|---|
-| `results/runs.jsonl` | `hcb run` | One JSON line per conversation (RunRecord) |
+| `results/runs.jsonl` | `hcb run` | One JSON line per conversation (`RunRecord`) |
 | `results/summary.json` | `hcb report` | Aggregated pass rates, CIs, pass@k |
 | `results/report.md` | `hcb report` | Markdown report with worst transcripts |
 | `results/plots/*.png` | `hcb plot` | Bar charts per persona × domain |
