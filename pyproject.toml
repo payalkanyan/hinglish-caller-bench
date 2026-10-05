@@ -5,6 +5,18 @@ description = "Stress-test AI customer-service agents with simulated Hinglish, H
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+authors = [{ name = "Payal", email = "youcancallmepayal@gmail.com" }]
+keywords = ["hinglish", "hindi", "benchmark", "llm", "eval", "customer-service", "ai-agent"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "pydantic>=2.7",
     "typer>=0.12",
@@ -13,6 +25,11 @@ dependencies = [
     "openai>=1.40,<2",
     "rich>=13",
 ]
+
+[project.urls]
+Homepage = "https://github.com/payalkanyan/hinglish-caller-bench"
+Repository = "https://github.com/payalkanyan/hinglish-caller-bench"
+Issues = "https://github.com/payalkanyan/hinglish-caller-bench/issues"
 
 [project.optional-dependencies]
 plot = ["matplotlib>=3.8"]

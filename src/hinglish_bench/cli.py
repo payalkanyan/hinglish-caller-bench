@@ -170,7 +170,7 @@ async def _run_demo() -> None:
 @app.command()
 def run(
     scenarios_dir: Path = typer.Option(  # noqa: B008
-        Path("scenarios"), help="Directory of scenario YAML files."
+        None, help="Directory of scenario YAML files (default: bundled scenarios)."
     ),
     results_dir: Path = typer.Option(  # noqa: B008
         Path("results"), help="Directory to write runs.jsonl into."
@@ -205,6 +205,9 @@ def run(
     dry_run: bool = typer.Option(False, "--dry-run", help="Print run plan and exit."),  # noqa: B008
 ) -> None:
     """Run the reference-agent baseline. Requires the provider's API key in environment."""
+    if scenarios_dir is None:
+        scenarios_dir = Path("scenarios")
+
     asyncio.run(
         _run_benchmark(
             scenarios_dir=scenarios_dir,
@@ -370,7 +373,7 @@ def report(
         Path("results"), help="Directory containing runs.jsonl."
     ),
     scenarios_dir: Path = typer.Option(  # noqa: B008
-        Path("scenarios"), help="Directory of scenario YAML files."
+        None, help="Directory of scenario YAML files (default: bundled scenarios)."
     ),
     k: int = typer.Option(3, help="k for pass@k estimator."),  # noqa: B008
     language_fit: bool = typer.Option(  # noqa: B008
@@ -385,6 +388,9 @@ def report(
     ),
 ) -> None:
     """Generate summary.json and report.md from a results directory."""
+    if scenarios_dir is None:
+        scenarios_dir = Path("scenarios")
+
     from hinglish_bench.report import generate
 
     judge_role = None

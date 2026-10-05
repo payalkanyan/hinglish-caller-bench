@@ -1,12 +1,27 @@
 # hinglish-caller-bench
 
-Stress-test AI customer-service agents with simulated Indian callers speaking Hinglish,
-Hindi (Devanagari and Roman), English, and code-switching styles.
+**Evaluate AI customer-service agents with simulated Indian callers speaking Hindi, Hinglish, and English.**
+
+You plug in your agent. The harness runs hundreds of realistic customer calls — in 5 language styles — and tells you exactly where it fails: task completion, tool compliance, and language fit. With confidence intervals and the worst transcripts to read.
+
+> v0.1 · delivery + EMI domains · reference-agent baseline
+
+---
+
+## How it works
+
+1. **Install and clone** the repo to get the scenario library
+2. **Plug in your agent** — as a Python class or (v0.2) an HTTP endpoint
+3. **The harness runs the calls** — simulated callers in 5 language styles work through scenarios with your agent, turn by turn
+4. **Every conversation is saved** — transcripts, tool calls, final database state
+5. **Get three scores** — task completion, tool correctness, and language fit — broken down by caller type, with 95% confidence intervals and the worst failures to read
+
+---
 
 ## Baseline results (v0.1)
 
 6 scenarios × 5 personas × 3 runs = **90 conversations**, delivery + EMI domains.
-Caller simulator: Groq `qwen/qwen3.8-27b`. Reference agent: Gemini `gemini-3.5-flash-lite`.
+Caller: Groq `qwen/qwen3.8-27b` · Agent: Gemini `gemini-3.5-flash-lite`
 
 | Persona | Domain | Success% | Tool% | pass@3 |
 |---|---|---|---|---|
@@ -21,28 +36,23 @@ Caller simulator: Groq `qwen/qwen3.8-27b`. Reference agent: Gemini `gemini-3.5-f
 | switcher | delivery | 67% | 22% | 0.33 |
 | switcher | emi_reminder | 100% | 22% | 1.00 |
 
-**Key finding:** Task success (88% overall) consistently outpaces tool correctness (42% overall).
-The agent satisfies callers without following the required tool call sequence — a process
-compliance gap that would be invisible to CSAT scores alone.
+**Key finding:** Task success (88%) consistently outpaces tool correctness (42%). The agent
+satisfies callers without following the required tool-call sequence — a process compliance
+gap that CSAT scores cannot see.
 
 ---
 
 ## Install
 
 ```bash
-# End users
-pip install hinglish-caller-bench
-
-# Contributors / development
-git clone https://github.com/your-org/hinglish-caller-bench
+git clone https://github.com/payalkanyan/hinglish-caller-bench
 cd hinglish-caller-bench
-uv sync --dev
-uv run hcb demo        # smoke-test; no API key needed
+pip install .
+# or: pip install hinglish-caller-bench  (then git clone for the scenarios/)
 ```
 
-To generate charts, also install the optional `plot` extra:
-
 ```bash
+# optional: bar charts
 pip install "hinglish-caller-bench[plot]"
 ```
 
@@ -51,136 +61,123 @@ pip install "hinglish-caller-bench[plot]"
 ## Quick start
 
 ```bash
-# 1. Smoke test with MockProvider (< 10 s, no API key)
-uv run hcb demo
+# Smoke test — no API key, < 10 s
+hcb demo
 
-# 2. Run the benchmark — split providers to stay within free-tier quotas
+# Run the benchmark (free-tier: split caller and agent across Groq + Gemini)
 export GROQ_API_KEY=gsk_...
 export GEMINI_API_KEY=AIza...
-uv run hcb run \
-  --caller-provider groq --agent-provider gemini \
-  --domains delivery,emi_reminder \
-  --n-scenarios 6 --personas all --runs 3 --max-turns 8
+hcb run --caller-provider groq --agent-provider gemini \
+        --domains delivery,emi_reminder --n-scenarios 6 --runs 3 --max-turns 8
 
-# 3. Generate summary and report (language-fit judge on a 30-record sample)
-uv run hcb report results/ --language-fit --lf-sample 30
+# Report with language-fit judge (samples 30 records to save quota)
+hcb report results/ --language-fit --lf-sample 30
 
-# 4. Generate bar charts (requires matplotlib)
-uv run hcb plot results/
+# Charts
+hcb plot results/
 ```
+
+---
+
+## Plugging in your own agent
+
+The reference agent in `src/hinglish_bench/examples/reference_agent.py` is a working example.
+To test your own agent, implement the `AgentUnderTest` interface:
+
+```python
+from hinglish_bench.agent import AgentUnderTest, AgentTurn, ToolDef
+from hinglish_bench.schemas import Turn
+
+class MyAgent(AgentUnderTest):
+    async def respond(self, turns: list[Turn], tools: list[ToolDef]) -> AgentTurn:
+        # call your agent here — HTTP, SDK, whatever
+        ...
+```
+
+Then pass it to `run_batch` directly in Python:
+
+```python
+from hinglish_bench.runner import run_batch
+from hinglish_bench.scenarios import load_scenarios_dir
+from hinglish_bench.personas import PERSONAS
+
+scenarios = load_scenarios_dir("scenarios/")
+records = await run_batch(
+    scenarios=scenarios,
+    personas=list(PERSONAS.values()),
+    caller_role=caller_role,          # your provider config
+    agent_factory=lambda: (MyAgent(), lambda: {}),
+    tools=your_tool_defs,
+    runs=3,
+    results_path="results/runs.jsonl",
+)
+```
+
+---
+
+## v0.1 scope and known limits
+
+**What v0.1 covers:**
+- 30 scenarios across 3 domains (delivery, EMI reminder, refund)
+- 5 caller personas (English, Hindi Devanagari, Hindi Roman, Hinglish, code-switcher)
+- 3 graders: task completion, tool correctness, language fit
+- Free-tier friendly: checkpointing, split-provider mode, LLM-judge sampling
+
+**Current limitation — tool/scenario coupling:**
+The scenarios assume a specific mock tool set (`lookup_order`, `reschedule_emi`, etc.) and a mock database. A real company's agent has its own tools and backend, so it can't run these scenarios without adaptation.
+
+**Roadmap for v0.2:**
+- `--agent-url` flag: point the harness at any HTTP endpoint, no Python needed
+- Tool adapter: map your tool names to scenario tools with a small config file
+- Custom scenario YAML: write scenarios for your own tools while reusing the personas, simulator, and graders
 
 ---
 
 ## Commands
 
-### `hcb demo`
-
-Runs 2 scenarios × 2 personas against a scripted `MockProvider`. No API keys, no network,
-completes in under 10 seconds. Prints a Rich table with end reason and token counts.
-
-### `hcb run [OPTIONS]`
-
-Runs the reference-agent baseline. Supports split-provider mode to spread load across
-free-tier quotas (caller on Groq, agent on Gemini, or any combination).
+### `hcb run`
 
 | Option | Default | Description |
 |---|---|---|
-| `--scenarios-dir` | `scenarios/` | Directory of scenario YAML files |
-| `--results-dir` | `results/` | Directory to write `runs.jsonl` |
-| `--n-scenarios` | `10` | Number of scenarios (stratified sample) |
-| `--all-scenarios` | off | Use all scenarios in the filtered set |
-| `--domains` | all | Comma-separated domain filter: `delivery,emi_reminder,refund` |
-| `--personas` | `all` | Comma-separated persona IDs or `all` |
-| `--runs` | `3` | Runs per (scenario, persona) combination |
-| `--provider` | `gemini` | Provider for both roles: `groq \| gemini \| openrouter \| ollama` |
-| `--caller-provider` | — | Override provider for caller simulator only |
+| `--domains` | all | Filter: `delivery,emi_reminder,refund` |
+| `--n-scenarios` | `10` | Scenarios (stratified sample) |
+| `--all-scenarios` | off | Use full filtered set |
+| `--personas` | `all` | Comma-separated or `all` |
+| `--runs` | `3` | Runs per (scenario, persona) |
+| `--provider` | `gemini` | Provider for both roles |
+| `--caller-provider` | — | Override provider for caller only |
 | `--agent-provider` | — | Override provider for agent only |
-| `--caller-model` | provider default | Model ID for the caller simulator |
-| `--agent-model` | provider default | Model ID for the reference agent |
-| `--max-turns` | from scenario YAML | Override max turns per conversation |
-| `--concurrency` | `4` | Max simultaneous conversations |
-| `--dry-run` | off | Print run plan and exit (no API calls) |
+| `--max-turns` | from YAML | Override turn cap |
+| `--concurrency` | `4` | Parallel conversations |
+| `--dry-run` | off | Print plan, no API calls |
 
-Runs checkpoint to `runs.jsonl` after each conversation. Re-running the same command
-resumes from where it left off; infra errors (rate limits, timeouts) are automatically
-retried on the next run.
+Checkpoints after every conversation. Re-run the same command to resume; infra errors are retried automatically.
 
-### `hcb report [RESULTS_DIR]`
-
-Reads `runs.jsonl` and writes:
-- `results/summary.json` — pass rates, Wilson 95% CIs, pass@k per persona × domain
-- `results/report.md` — Markdown table + 3 worst-transcript examples
+### `hcb report`
 
 | Option | Default | Description |
 |---|---|---|
-| `--k` | `3` | k for pass@k estimator |
-| `--language-fit` | off | Run LLM language-fit judge (requires provider API key) |
-| `--lf-sample N` | all | Score only N randomly sampled records (saves quota) |
-| `--provider` | `gemini` | Provider for the language-fit judge |
-| `--judge-model` | provider default | Model for the language-fit judge |
+| `--k` | `3` | k for pass@k |
+| `--language-fit` | off | Run LLM language-fit judge |
+| `--lf-sample N` | all | Score only N sampled records |
+| `--provider` | `gemini` | Provider for judge |
 
-### `hcb plot [RESULTS_DIR]`
+Writes `summary.json` (pass rates, Wilson 95% CIs, pass@k) and `report.md` (table + 3 worst transcripts).
 
-Reads `results/summary.json` and writes PNG charts to `results/plots/`. Requires
-`pip install "hinglish-caller-bench[plot]"`.
+### `hcb plot`
 
-Charts produced:
-- `success_rate.png` — task success rate per persona × domain with 95% Wilson CI
-- `tool_rate.png` — tool correctness rate per persona × domain
-- `pass_at_k.png` — pass@k estimator per persona × domain (skipped if no data)
+Reads `summary.json`, writes `plots/success_rate.png`, `plots/tool_rate.png`, `plots/pass_at_k.png`.
 
 ---
 
-## Benchmark design
-
-### Corpus
-
-- **30 scenarios** across 3 domains: 10 refund, 10 emi_reminder, 10 delivery
-- **5 personas:** `english`, `hindi_devanagari`, `hindi_roman`, `hinglish`, `switcher`
-- **6 mock tools:** `lookup_order`, `initiate_refund`, `check_emi_status`, `reschedule_emi`,
-  `track_delivery`, `escalate_to_human`
-
-Full experiment: 30 × 5 × 3 = **450 conversations**. Use `--n-scenarios`, `--domains`,
-`--personas`, and `--runs` to run a representative subset.
-
-### Metrics
+## Metrics
 
 | Metric | What it measures |
 |---|---|
-| **Task success rate** | Did the agent reach the scenario's `success_state`? |
-| **Tool correctness rate** | Required tools called with correct args, right order, no forbidden extras |
-| **pass@k** | Unbiased estimator: P(at least one of k runs succeeds) |
-| **Language-fit score** | LLM judge (1–5): how well the agent matched the caller's language register |
-
-### Grading
-
-Each `RunRecord` (raw transcript + DB snapshot) is graded independently after the run.
-Grades are never stored in the record; `hcb report` computes them from `runs.jsonl`.
-Infrastructure errors (rate limits, provider timeouts) are excluded from all rates and
-reported separately so they never inflate failure counts.
-
----
-
-## Output files
-
-| File | Written by | Contents |
-|---|---|---|
-| `results/runs.jsonl` | `hcb run` | One JSON line per conversation (`RunRecord`) |
-| `results/summary.json` | `hcb report` | Aggregated pass rates, CIs, pass@k |
-| `results/report.md` | `hcb report` | Markdown report with worst transcripts |
-| `results/plots/*.png` | `hcb plot` | Bar charts per persona × domain |
-
----
-
-## Extending
-
-**Add a scenario:** drop a YAML file in `scenarios/`. The schema is in
-`src/hinglish_bench/schemas.py` (`Scenario`). Scenario `id` must match the filename
-(without `.yaml`). Run `hcb run --dry-run` to validate the corpus.
-
-**Swap the agent:** implement `AgentUnderTest` (see `src/hinglish_bench/agent.py`) and
-pass it to `run_batch` in `src/hinglish_bench/runner.py`. The reference agent in
-`src/hinglish_bench/examples/reference_agent.py` is a complete example.
+| **Task success** | Did the agent reach the scenario's required end state? |
+| **Tool correctness** | Required tools called, correct args, right order, no forbidden calls |
+| **pass@k** | P(at least one of k runs succeeds) — unbiased estimator |
+| **Language fit** | LLM judge 1–5: did the agent match the caller's language register? *(experimental)* |
 
 ---
 
