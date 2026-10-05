@@ -176,20 +176,32 @@ def run(
         Path("results"), help="Directory to write runs.jsonl into."
     ),
     n_scenarios: int = typer.Option(10, help="Number of scenarios (stratified sample)."),  # noqa: B008
-    all_scenarios: bool = typer.Option(False, "--all-scenarios", help="Use all 30 scenarios."),  # noqa: B008
+    all_scenarios: bool = typer.Option(False, "--all-scenarios", help="Use all scenarios."),  # noqa: B008
+    domains_opt: str = typer.Option(  # noqa: B008
+        None, "--domains", help="Comma-separated domain filter: delivery,emi_reminder,refund (default: all)."
+    ),
     personas_opt: str = typer.Option(  # noqa: B008
         "all", "--personas", help="Comma-separated persona IDs or 'all'."
     ),
     runs: int = typer.Option(3, help="Runs per (scenario, persona)."),  # noqa: B008
     caller_model: str = typer.Option(  # noqa: B008
-        None, help="Model ID for the caller simulator (default depends on --provider)."
+        None, help="Model ID for the caller simulator (default depends on --caller-provider)."
     ),
     agent_model: str = typer.Option(  # noqa: B008
-        None, help="Model ID for the reference agent (default depends on --provider)."
+        None, help="Model ID for the reference agent (default depends on --agent-provider)."
     ),
-    provider: str = typer.Option("gemini", help="Provider preset: groq | gemini | openrouter."),  # noqa: B008
+    provider: str = typer.Option("gemini", help="Provider preset for both roles: groq | gemini | openrouter | ollama."),  # noqa: B008
+    caller_provider: str = typer.Option(  # noqa: B008
+        None, "--caller-provider", help="Override provider for caller simulator (splits quota)."
+    ),
+    agent_provider: str = typer.Option(  # noqa: B008
+        None, "--agent-provider", help="Override provider for agent (splits quota)."
+    ),
     cache_dir: Path = typer.Option(Path(".cache"), help="Response cache directory."),  # noqa: B008
     concurrency: int = typer.Option(4, help="Max simultaneous conversations."),  # noqa: B008
+    max_turns: int = typer.Option(  # noqa: B008
+        None, "--max-turns", help="Override max turns per conversation (default: from scenario YAML)."
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Print run plan and exit."),  # noqa: B008
 ) -> None:
     """Run the reference-agent baseline. Requires the provider's API key in environment."""
@@ -199,13 +211,17 @@ def run(
             results_dir=results_dir,
             n_scenarios=n_scenarios,
             all_scenarios=all_scenarios,
+            domains_opt=domains_opt,
             personas_opt=personas_opt,
             runs=runs,
             caller_model=caller_model,
             agent_model=agent_model,
             provider=provider,
+            caller_provider=caller_provider,
+            agent_provider=agent_provider,
             cache_dir=cache_dir,
             concurrency=concurrency,
+            max_turns=max_turns,
             dry_run=dry_run,
         )
     )
@@ -217,40 +233,60 @@ async def _run_benchmark(
     results_dir: Path,
     n_scenarios: int,
     all_scenarios: bool,
+    domains_opt: str | None,
     personas_opt: str,
     runs: int,
     caller_model: str,
     agent_model: str,
     provider: str,
+    caller_provider: str | None,
+    agent_provider: str | None,
     cache_dir: Path,
     concurrency: int,
+    max_turns: int | None,
     dry_run: bool,
 ) -> None:
     from hinglish_bench.config import ProviderPool, RoleConfig
     from hinglish_bench.examples.reference_agent import TOOL_DEFS, MockDB, ReferenceAgent
     from hinglish_bench.personas import PERSONAS
     from hinglish_bench.runner import run_batch
-    from hinglish_bench.scenarios import load_scenarios_dir, select_scenarios
+    from hinglish_bench.scenarios import filter_by_domains, load_scenarios_dir, select_scenarios
 
     # 0. Resolve per-provider model defaults
     _default_models: dict[str, str] = {
         "gemini": "models/gemini-3.5-flash-lite",
-        "groq": "llama-3.3-70b-versatile",
+        "groq": "qwen/qwen3.8-27b",
         "openrouter": "meta-llama/llama-3.3-70b-instruct",
+        "ollama": "mistral:latest",
     }
-    default_model = _default_models.get(provider, "models/gemini-3.5-flash-lite")
+    _rpm: dict[str, float] = {"groq": 25, "gemini": 14, "openrouter": 18, "ollama": 120}
+
+    eff_caller_provider = caller_provider or provider
+    eff_agent_provider = agent_provider or provider
     if caller_model is None:
-        caller_model = default_model
+        caller_model = _default_models.get(eff_caller_provider, "models/gemini-3.5-flash-lite")
     if agent_model is None:
-        agent_model = default_model
+        agent_model = _default_models.get(eff_agent_provider, "models/gemini-3.5-flash-lite")
 
     # 1. Load + validate corpus first (before any provider construction)
     scenarios = load_scenarios_dir(scenarios_dir)
 
-    # 2. Select scenarios
+    # 2. Apply domain filter before selection
+    if domains_opt:
+        domain_list = [d.strip() for d in domains_opt.split(",") if d.strip()]
+        scenarios = filter_by_domains(scenarios, domain_list)
+        if not scenarios:
+            typer.echo(f"No scenarios match domains: {domain_list}", err=True)
+            raise typer.Exit(code=1)
+
+    # 3. Select scenarios
     selected = scenarios if all_scenarios else select_scenarios(scenarios, n_scenarios)
 
-    # 3. Resolve personas
+    # 4. Apply max_turns override (create model copies so originals stay clean)
+    if max_turns is not None:
+        selected = [sc.model_copy(update={"max_turns": max_turns}) for sc in selected]
+
+    # 5. Resolve personas
     if personas_opt.strip().lower() == "all":
         persona_list = list(PERSONAS.values())
     else:
@@ -261,44 +297,48 @@ async def _run_benchmark(
             raise typer.Exit(code=1)
         persona_list = [PERSONAS[i] for i in ids]
 
-    # 4. Dry-run: print plan and exit (deterministic, no provider construction)
+    # 5. Dry-run: print plan and exit (deterministic, no provider construction)
     total_runs = len(selected) * len(persona_list) * runs
     if dry_run:
         typer.echo("=== DRY RUN ===")
         typer.echo(f"Scenarios ({len(selected)}):")
         for sc in selected:
-            typer.echo(f"  {sc.id}  [{sc.domain}]")
+            typer.echo(f"  {sc.id}  [{sc.domain}]  max_turns={sc.max_turns}")
         typer.echo(f"Personas ({len(persona_list)}): {[p.id for p in persona_list]}")
         typer.echo(f"Runs per combination: {runs}")
-        typer.echo(f"Provider:     {provider}")
-        typer.echo(f"Caller model: {caller_model}")
-        typer.echo(f"Agent model:  {agent_model}")
+        typer.echo(f"Caller provider: {eff_caller_provider}  model: {caller_model}")
+        typer.echo(f"Agent provider:  {eff_agent_provider}  model: {agent_model}")
         typer.echo(f"Concurrency:  {concurrency}")
         typer.echo(f"Total conversations: {total_runs}")
         return
 
-    # 5. Build provider pool + roles
-    # Conservative RPM per free-tier limits: Groq 30→25, Gemini 15→14, OpenRouter 20→18
-    _rpm: dict[str, float] = {"groq": 25, "gemini": 14, "openrouter": 18}
-    rpm = _rpm.get(provider, 20)
+    # 6. Build provider pool + roles (caller and agent may use different providers/quotas)
     pool = ProviderPool(cache_dir=cache_dir)
-    caller_cfg = RoleConfig(model=caller_model, provider=provider, requests_per_minute=rpm)
-    agent_cfg = RoleConfig(model=agent_model, provider=provider, requests_per_minute=rpm)
+    caller_cfg = RoleConfig(
+        model=caller_model,
+        provider=eff_caller_provider,
+        requests_per_minute=_rpm.get(eff_caller_provider, 20),
+    )
+    agent_cfg = RoleConfig(
+        model=agent_model,
+        provider=eff_agent_provider,
+        requests_per_minute=_rpm.get(eff_agent_provider, 20),
+    )
     caller_role = pool.role(name="caller", cfg=caller_cfg)
     agent_role = pool.role(name="agent", cfg=agent_cfg)
 
-    # 6. Agent factory: fresh MockDB per run (reference-agent baseline)
+    # 7. Agent factory: fresh MockDB per run (reference-agent baseline)
     def agent_factory():  # type: ignore[return]
         db = MockDB()
         agent = ReferenceAgent(agent_role, db)
         return agent, db.dump
 
-    # 7. Run
+    # 8. Run
     results_path = results_dir / "runs.jsonl"
     typer.echo(
         f"Running {total_runs} conversations "
         f"({len(selected)} scenarios × {len(persona_list)} personas × {runs} runs) "
-        f"[reference-agent baseline] …"
+        f"[caller={eff_caller_provider}/{caller_model}  agent={eff_agent_provider}/{agent_model}] …"
     )
     records = await run_batch(
         scenarios=selected,
@@ -311,10 +351,11 @@ async def _run_benchmark(
         max_concurrency=concurrency,
     )
 
-    # 8. Summary
+    # 9. Summary
     n_success = sum(1 for r in records if r.end_reason == "success")
+    n_infra = sum(1 for r in records if r.infra_error)
     n_total = len(records)
-    typer.echo(f"Ran {n_total} conversations. Success: {n_success}/{n_total}.")
+    typer.echo(f"Ran {n_total} conversations. Success: {n_success}/{n_total}. Infra errors: {n_infra}.")
     typer.echo(f"Results → {results_path}")
 
 
@@ -332,11 +373,34 @@ def report(
         Path("scenarios"), help="Directory of scenario YAML files."
     ),
     k: int = typer.Option(3, help="k for pass@k estimator."),  # noqa: B008
+    language_fit: bool = typer.Option(  # noqa: B008
+        False, "--language-fit", help="Run LLM language-fit judge (requires provider API key)."
+    ),
+    lf_sample: int = typer.Option(  # noqa: B008
+        None, "--lf-sample", help="Score only a random sample of N records for language-fit (default: all)."
+    ),
+    provider: str = typer.Option("gemini", help="Provider for language-fit judge."),  # noqa: B008
+    judge_model: str = typer.Option(  # noqa: B008
+        None, help="Model for language-fit judge (default: provider default)."
+    ),
 ) -> None:
     """Generate summary.json and report.md from a results directory."""
     from hinglish_bench.report import generate
 
-    generate(results_dir, scenarios_dir, k=k)
+    judge_role = None
+    if language_fit:
+        from hinglish_bench.config import ProviderPool, RoleConfig
+
+        _default_models: dict[str, str] = {
+            "gemini": "models/gemini-3.5-flash-lite",
+            "groq": "qwen/qwen3.8-27b",
+        }
+        model = judge_model or _default_models.get(provider, "models/gemini-3.5-flash-lite")
+        pool = ProviderPool(cache_dir=Path(".cache"))
+        cfg = RoleConfig(model=model, provider=provider, requests_per_minute=14)
+        judge_role = pool.role(name="judge", cfg=cfg)
+
+    generate(results_dir, scenarios_dir, k=k, judge_role=judge_role, lf_sample=lf_sample)
     typer.echo(f"Report written to {results_dir}/")
 
 

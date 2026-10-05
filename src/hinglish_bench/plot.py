@@ -69,7 +69,7 @@ def generate_plots(summary_path: Path, output_dir: Path) -> list[Path]:
                     yerr_hi.append(0.0)
 
             offsets = [xi + (i - n_personas / 2 + 0.5) * bar_width for xi in x]
-            ax.bar(
+            bars = ax.bar(
                 offsets,
                 heights,
                 width=bar_width,
@@ -77,6 +77,21 @@ def generate_plots(summary_path: Path, output_dir: Path) -> list[Path]:
                 capsize=4,
                 label=persona,
             )
+            # Label each bar with n so readers know the sample size behind it.
+            for bar, domain in zip(bars, sorted_domains):
+                cell = groups.get(persona, {}).get(domain)
+                n = cell.get("n", 0) if cell else 0
+                if n > 0:
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        0.01,
+                        f"n={n}",
+                        ha="center",
+                        va="bottom",
+                        fontsize=6,
+                        rotation=90,
+                        color="white",
+                    )
 
         ax.set_xticks(list(x))
         ax.set_xticklabels(sorted_domains)

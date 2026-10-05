@@ -1,0 +1,319 @@
+{
+  "groups": {
+    "english": {
+      "delivery": {
+        "n": 9,
+        "successes": 8,
+        "tool_passes": 4,
+        "success_rate": 0.8888888888888888,
+        "success_ci": [
+          0.5649937852319399,
+          0.9801096286728695
+        ],
+        "tool_rate": 0.4444444444444444,
+        "tool_ci": [
+          0.188775429471914,
+          0.7333526542559703
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 0.6666666666666666,
+        "k": 3
+      },
+      "emi_reminder": {
+        "n": 9,
+        "successes": 9,
+        "tool_passes": 3,
+        "success_rate": 1.0,
+        "success_ci": [
+          0.7008472464490407,
+          1.0
+        ],
+        "tool_rate": 0.3333333333333333,
+        "tool_ci": [
+          0.12058159868274293,
+          0.6458026525009102
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 1.0,
+        "k": 3
+      }
+    },
+    "hindi_devanagari": {
+      "delivery": {
+        "n": 9,
+        "successes": 5,
+        "tool_passes": 3,
+        "success_rate": 0.5555555555555556,
+        "success_ci": [
+          0.2666473457440297,
+          0.811224570528086
+        ],
+        "tool_rate": 0.3333333333333333,
+        "tool_ci": [
+          0.12058159868274293,
+          0.6458026525009102
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 0.3333333333333333,
+        "k": 3
+      },
+      "emi_reminder": {
+        "n": 9,
+        "successes": 9,
+        "tool_passes": 8,
+        "success_rate": 1.0,
+        "success_ci": [
+          0.7008472464490407,
+          1.0
+        ],
+        "tool_rate": 0.8888888888888888,
+        "tool_ci": [
+          0.5649937852319399,
+          0.9801096286728695
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 1.0,
+        "k": 3
+      }
+    },
+    "hindi_roman": {
+      "delivery": {
+        "n": 9,
+        "successes": 7,
+        "tool_passes": 5,
+        "success_rate": 0.7777777777777778,
+        "success_ci": [
+          0.4525833436728054,
+          0.9367762376877727
+        ],
+        "tool_rate": 0.5555555555555556,
+        "tool_ci": [
+          0.2666473457440297,
+          0.811224570528086
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 0.3333333333333333,
+        "k": 3
+      },
+      "emi_reminder": {
+        "n": 9,
+        "successes": 9,
+        "tool_passes": 7,
+        "success_rate": 1.0,
+        "success_ci": [
+          0.7008472464490407,
+          1.0
+        ],
+        "tool_rate": 0.7777777777777778,
+        "tool_ci": [
+          0.4525833436728054,
+          0.9367762376877727
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 1.0,
+        "k": 3
+      }
+    },
+    "hinglish": {
+      "delivery": {
+        "n": 9,
+        "successes": 8,
+        "tool_passes": 0,
+        "success_rate": 0.8888888888888888,
+        "success_ci": [
+          0.5649937852319399,
+          0.9801096286728695
+        ],
+        "tool_rate": 0.0,
+        "tool_ci": [
+          0.0,
+          0.2991527535509594
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 0.6666666666666666,
+        "k": 3
+      },
+      "emi_reminder": {
+        "n": 9,
+        "successes": 9,
+        "tool_passes": 4,
+        "success_rate": 1.0,
+        "success_ci": [
+          0.7008472464490407,
+          1.0
+        ],
+        "tool_rate": 0.4444444444444444,
+        "tool_ci": [
+          0.188775429471914,
+          0.7333526542559703
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 1.0,
+        "k": 3
+      }
+    },
+    "switcher": {
+      "delivery": {
+        "n": 9,
+        "successes": 6,
+        "tool_passes": 2,
+        "success_rate": 0.6666666666666666,
+        "success_ci": [
+          0.35419734749908977,
+          0.879418401317257
+        ],
+        "tool_rate": 0.2222222222222222,
+        "tool_ci": [
+          0.06322376231222723,
+          0.5474166563271946
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 0.3333333333333333,
+        "k": 3
+      },
+      "emi_reminder": {
+        "n": 9,
+        "successes": 9,
+        "tool_passes": 2,
+        "success_rate": 1.0,
+        "success_ci": [
+          0.7008472464490407,
+          1.0
+        ],
+        "tool_rate": 0.2222222222222222,
+        "tool_ci": [
+          0.06322376231222723,
+          0.5474166563271946
+        ],
+        "mean_language_fit": 5.0,
+        "pass_at_k": 1.0,
+        "k": 3
+      }
+    }
+  },
+  "worst_transcripts": [
+    {
+      "scenario_id": "delivery_damaged_carrier",
+      "persona_id": "hindi_devanagari",
+      "model": "qwen/qwen3.8-27b",
+      "run_index": 1,
+      "end_reason": "caller_ended",
+      "task_passed": false,
+      "missing_required": [
+        "track_delivery",
+        "escalate_to_human"
+      ],
+      "wrong_args": [],
+      "forbidden_violations": [],
+      "precedence_violations": [],
+      "turns": [
+        {
+          "speaker": "caller",
+          "text": "\u0928\u092e\u0938\u094d\u0924\u0947, \u092e\u0948\u0902\u0928\u0947 \u0939\u093e\u0932 \u0939\u0940 \u092e\u0947\u0902 \u090f\u0915 \u0938\u0930\u094b\u0915\u0930\u0940 \u0938\u0947\u091f \u0915\u093e \u0911\u0930\u094d\u0921\u0930 \u0915\u093f\u092f\u093e \u0925\u093e\u0964 \u0921\u093f\u0932\u0940\u0935\u0930\u0940 \u0915\u0947 \u0938\u092e\u092f \u091c\u093f\u0938 \u092c\u0949\u0915\u094d\u0938 \u0915\u094b \u092e\u0941\u091d\u0947 \u0926\u093f\u092f\u093e \u0917\u092f\u093e \u0925\u093e, \u0935\u094b \u092c\u0939\u0941\u0924 \u091c\u094d\u092f\u093e\u0926\u093e \u0915\u0941\u091a\u0932\u093e \u0939\u0941\u0906 \u0925\u093e \u0914\u0930 \u0905\u0902\u0926\u0930 \u0938\u0947 \u091f\u0942\u091f\u0947 \u0939\u0941\u090f \u0915\u093e\u0902\u091a \u0915\u0940 \u0906\u0935\u093e\u091c \u0906 \u0930\u0939\u0940 \u0925\u0940\u0964 \u092e\u0948\u0902\u0928\u0947 \u0916\u094b\u0932\u0928\u0947 \u0938\u0947 \u092a\u0939\u0932\u0947 \u0939\u0940 \u092b\u094b\u091f\u094b \u0932\u0947 \u0932\u0940 \u0925\u0940\u0964 \u092e\u0941\u091d\u0947 \u0907\u0938\u0915\u0940 \u0936\u093f\u0915\u093e\u092f\u0924 \u0926\u0930\u094d\u091c \u0915\u0930\u093e\u0928\u0940 \u0939\u0948 \u0914\u0930 \u0930\u093f\u092a\u094d\u0932\u0947\u0938\u092e\u0947\u0902\u091f \u092f\u093e \u0930\u093f\u092b\u0902\u0921 \u091a\u093e\u0939\u093f\u090f\u0964"
+        },
+        {
+          "speaker": "agent",
+          "text": "\u0928\u092e\u0938\u094d\u0924\u0947 \u091c\u0940\u0964 \u0906\u092a\u0915\u0947 \u0907\u0938 \u0905\u0928\u0941\u092d\u0935 \u0915\u0947 \u0932\u093f\u090f \u092e\u0941\u091d\u0947 \u0916\u0947\u0926 \u0939\u0948\u0964 \n\n\u0907\u0938 \u0938\u092e\u0938\u094d\u092f\u093e \u0915\u093e \u0938\u092e\u093e\u0927\u093e\u0928 \u0915\u0930\u0928\u0947 \u0915\u0947 \u0932\u093f\u090f \u092e\u0941\u091d\u0947 \u0906\u092a\u0915\u0947 \u0911\u0930\u094d\u0921\u0930 \u0928\u0902\u092c\u0930 \u0915\u0940 \u0906\u0935\u0936\u094d\u092f\u0915\u0924\u093e \u0939\u094b\u0917\u0940\u0964 \u0915\u0943\u092a\u092f\u093e \u0905\u092a\u0928\u093e \u0911\u0930\u094d\u0921\u0930 \u0928\u0902\u092c\u0930 \u092c\u0924\u093e \u0926\u0940\u091c\u093f\u090f, \u0924\u093e\u0915\u093f \u092e\u0948\u0902 \u0906\u0917\u0947 \u0915\u0940 \u0915\u093e\u0930\u094d\u0930\u0935\u093e\u0908 \u0915\u0930 \u0938\u0915\u0942\u0902\u0964"
+        },
+        {
+          "speaker": "caller",
+          "text": "\u091c\u0940 \u0939\u093e\u0901, \u092e\u0947\u0930\u093e \u0911\u0930\u094d\u0921\u0930 \u0906\u0908\u0921\u0940 ORD-22006 \u0939\u0948\u0964"
+        },
+        {
+          "speaker": "agent",
+          "text": "\u0906\u092a\u0915\u0947 \u0911\u0930\u094d\u0921\u0930 (ORD-22006) \u0915\u0947 \u0932\u093f\u090f \u20b92,199 \u0915\u093e \u0930\u093f\u092b\u0902\u0921 \u0938\u092b\u0932\u0924\u093e\u092a\u0942\u0930\u094d\u0935\u0915 \u0936\u0941\u0930\u0942 \u0915\u0930 \u0926\u093f\u092f\u093e \u0917\u092f\u093e \u0939\u0948\u0964 \n\n\u091a\u0942\u0902\u0915\u093f \u092c\u0949\u0915\u094d\u0938 \u0915\u094d\u0937\u0924\u093f\u0917\u094d\u0930\u0938\u094d\u0924 \u0925\u093e, \u0906\u092a\u0928\u0947 \u092b\u094b\u091f\u094b \u0932\u0947 \u0932\u0940 \u0939\u0948 \u092f\u0939 \u092c\u0939\u0941\u0924 \u0905\u091a\u094d\u091b\u093e \u0915\u093f\u092f\u093e\u0964 \u0930\u093f\u092b\u0902\u0921 \u0915\u0940 \u0930\u093e\u0936\u093f \u0915\u0941\u091b \u0939\u0940 \u0926\u093f\u0928\u094b\u0902 \u092e\u0947\u0902 \u0906\u092a\u0915\u0947 \u0913\u0930\u093f\u091c\u093f\u0928\u0932 \u092a\u0947\u092e\u0947\u0902\u091f \u092e\u0947\u0925\u0921 \u092a\u0930 \u092a\u0939\u0941\u0901\u091a \u091c\u093e\u090f\u0917\u0940\u0964 \u0915\u094d\u092f\u093e \u092e\u0948\u0902 \u0915\u093f\u0938\u0940 \u0914\u0930 \u0938\u0939\u093e\u092f\u0924\u093e \u092e\u0947\u0902 \u0906\u092a\u0915\u0940 \u092e\u0926\u0926 \u0915\u0930 \u0938\u0915\u0924\u093e \u0939\u0942\u0901?"
+        },
+        {
+          "speaker": "caller",
+          "text": "\u091c\u0940, \u0906\u092a\u0928\u0947 \u0938\u0939\u0940 \u0915\u093f\u092f\u093e\u0964 \u092e\u0948\u0902\u0928\u0947 \u0924\u094b \u0936\u0941\u0930\u0942 \u092e\u0947\u0902 \u0930\u093f\u092a\u094d\u0932\u0947\u0938\u092e\u0947\u0902\u091f \u0915\u093e \u092d\u0940 \u0935\u093f\u0915\u0932\u094d\u092a \u092a\u0942\u091b\u093e \u0925\u093e, \u0915\u094d\u092f\u094b\u0902\u0915\u093f \u092e\u0941\u091d\u0947 \u0935\u094b \u0938\u0930\u094b\u0915\u0930\u0940 \u0938\u0947\u091f \u091a\u093e\u0939\u093f\u090f \u0925\u093e\u0964 \u0905\u0917\u0930 \u0930\u093f\u092b\u0902\u0921 \u0939\u0940 \u0939\u094b \u0930\u0939\u093e \u0939\u0948, \u0924\u094b \u0920\u0940\u0915 \u0939\u0948, \u0932\u0947\u0915\u093f\u0928 \u092e\u0941\u091d\u0947 \u092c\u0924\u093e\u0928\u093e \u0939\u094b\u0917\u093e \u0915\u093f \u092a\u0948\u0938\u093e \u0935\u093e\u092a\u0938 \u0915\u093f\u0924\u0928\u0947 \u0926\u093f\u0928\u094b\u0902 \u092e\u0947\u0902 \u092e\u093f\u0932\u0947\u0917\u093e? \u0914\u0930 \u0915\u094d\u092f\u093e \u0907\u0938\u0938\u0947 \u092a\u0939\u0932\u0947 \u092e\u0941\u091d\u0947 \u0915\u094b\u0908 \u0915\u0949\u0928\u094d\u092b\u0930\u094d\u092e\u0947\u0936\u0928 \u092e\u093f\u0932\u0947\u0917\u093e?"
+        },
+        {
+          "speaker": "agent",
+          "text": "\u0930\u093f\u092b\u0902\u0921 \u0915\u0940 \u0930\u093e\u0936\u093f \u0938\u093e\u092e\u093e\u0928\u094d\u092f\u0924\u0903 3 \u0938\u0947 5 \u0915\u093e\u0930\u094d\u092f \u0926\u093f\u0935\u0938\u094b\u0902 (business days) \u0915\u0947 \u092d\u0940\u0924\u0930 \u0906\u092a\u0915\u0947 \u0913\u0930\u093f\u091c\u093f\u0928\u0932 \u092a\u0947\u092e\u0947\u0902\u091f \u092e\u0947\u0925\u0921 \u092e\u0947\u0902 \u0935\u093e\u092a\u0938 \u0906 \u091c\u093e\u090f\u0917\u0940\u0964 \n\n\u091c\u0948\u0938\u0947 \u0939\u0940 \u0930\u093f\u092b\u0902\u0921 \u092a\u094d\u0930\u094b\u0938\u0947\u0938 \u092a\u0942\u0930\u093e \u0939\u094b\u0917\u093e, \u0906\u092a\u0915\u094b \u0906\u092a\u0915\u0947 \u0930\u091c\u093f\u0938\u094d\u091f\u0930\u094d\u0921 \u092e\u094b\u092c\u093e\u0907\u0932 \u0928\u0902\u092c\u0930 \u0914\u0930 \u0908\u092e\u0947\u0932 \u092a\u0930 \u090f\u0915 \u0915\u0928\u094d\u092b\u0930\u094d\u092e\u0947\u0936\u0928 \u092e\u0948\u0938\u0947\u091c (\u092a\u0941\u0937\u094d\u091f\u093f \u0938\u0902\u0926\u0947\u0936) \u092e\u093f\u0932 \u091c\u093e\u090f\u0917\u093e\u0964 \n\n\u0905\u0917\u0930 \u0906\u092a \u091a\u093e\u0939\u0947\u0902 \u0924\u094b \u0909\u0938\u0940 \u0938\u0930\u094b\u0915\u0930\u0940 \u0938\u0947\u091f \u0915\u0947 \u0932\u093f\u090f \u0928\u092f\u093e \u0911\u0930\u094d\u0921\u0930 \u092d\u0940 \u0915\u0930 \u0938\u0915\u0924\u0940 \u0939\u0948\u0902, \u0915\u094d\u092f\u094b\u0902\u0915\u093f \u092f\u0939 \u0906\u0907\u091f\u092e \u0905\u092d\u0940 \u0909\u092a\u0932\u092c\u094d\u0927 \u0939\u0948\u0964 \u0915\u094d\u092f\u093e \u092e\u0948\u0902 \u0907\u0938\u092e\u0947\u0902 \u0906\u092a\u0915\u0940 \u0915\u094b\u0908 \u0914\u0930 \u0938\u0939\u093e\u092f\u0924\u093e \u0915\u0930 \u0938\u0915\u0924\u093e \u0939\u0942\u0901?"
+        }
+      ]
+    },
+    {
+      "scenario_id": "delivery_damaged_carrier",
+      "persona_id": "hindi_devanagari",
+      "model": "qwen/qwen3.8-27b",
+      "run_index": 0,
+      "end_reason": "max_turns",
+      "task_passed": false,
+      "missing_required": [
+        "track_delivery",
+        "escalate_to_human"
+      ],
+      "wrong_args": [],
+      "forbidden_violations": [],
+      "precedence_violations": [],
+      "turns": [
+        {
+          "speaker": "caller",
+          "text": "\u0928\u092e\u0938\u094d\u0924\u0947, \u092e\u0941\u091d\u0947 \u0905\u092a\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 \u0915\u0947 \u092c\u093e\u0930\u0947 \u092e\u0947\u0902 \u0936\u093f\u0915\u093e\u092f\u0924 \u0926\u0930\u094d\u091c \u0915\u0930\u093e\u0928\u0940 \u0939\u0948\u0964"
+        },
+        {
+          "speaker": "agent",
+          "text": "\u0928\u092e\u0938\u094d\u0924\u0947! \u092e\u0948\u0902 \u0906\u092a\u0915\u0940 \u0936\u093f\u0915\u093e\u092f\u0924 \u0926\u0930\u094d\u091c \u0915\u0930\u0928\u0947 \u092e\u0947\u0902 \u092e\u0926\u0926 \u0915\u0930 \u0938\u0915\u0924\u093e \u0939\u0942\u0901\u0964 \u0915\u0943\u092a\u092f\u093e \u092e\u0941\u091d\u0947 \u0905\u092a\u0928\u093e **\u0911\u0930\u094d\u0921\u0930 \u0906\u0908\u0921\u0940 (Order ID)** \u092c\u0924\u093e\u090f\u0901 \u0924\u093e\u0915\u093f \u092e\u0948\u0902 \u0938\u094d\u0925\u093f\u0924\u093f \u0915\u0940 \u091c\u093e\u0901\u091a \u0915\u0930 \u0938\u0915\u0942\u0901\u0964"
+        },
+        {
+          "speaker": "caller",
+          "text": "\u091c\u0940 \u0939\u093e\u0901, \u092e\u0947\u0930\u093e \u0911\u0930\u094d\u0921\u0930 \u0906\u0908\u0921\u0940 \u0939\u0948 ORD-22006\u0964"
+        },
+        {
+          "speaker": "agent",
+          "text": "\u0906\u092a\u0915\u093e \u0911\u0930\u094d\u0921\u0930 (ORD-22006 - \u0915\u094d\u0930\u0949\u0915\u0930\u0940 \u0938\u0947\u091f) \u0905\u092d\u0940 \u0930\u093e\u0938\u094d\u0924\u0947 \u092e\u0947\u0902 \u0939\u0948 (In Transit) \u0914\u0930 \u0907\u0938\u0915\u0940 \u0915\u0941\u0932 \u0930\u093e\u0936\u093f \u20b92,199 \u0939\u0948\u0964 \n\n\u0906\u092a \u0907\u0938 \u0911\u0930\u094d\u0921\u0930 \u0915\u0947 \u092c\u093e\u0930\u0947 \u092e\u0947\u0902 \u0915\u094d\u092f\u093e \u0915\u0930\u0928\u093e \u091a\u093e\u0939\u0924\u0947 \u0939\u0948\u0902? \u0915\u094d\u092f\u093e \u0906\u092a \u0907\u0938\u0915\u0940 \u0921\u093f\u0932\u0940\u0935\u0930\u0940 \u091f\u094d\u0930\u0948\u0915 \u0915\u0930\u0928\u093e \u091a\u093e\u0939\u0924\u0947 \u0939\u0948\u0902 \u092f\u093e \u0907\u0938\u0915\u0947 \u0932\u093f\u090f \u0930\u093f\u092b\u0902\u0921 \u0936\u0941\u0930\u0942 \u0915\u0930\u0928\u093e \u091a\u093e\u0939\u0924\u0947 \u0939\u0948\u0902?"
+        },
+        {
+          "speaker": "caller",
+          "text": "\u0928\u0939\u0940\u0902, \u092e\u0948\u0902 \u091f\u094d\u0930\u0948\u0915 \u0928\u0939\u0940\u0902 \u0915\u0930\u0928\u093e \u091a\u093e\u0939\u0924\u093e\u0964 \u092e\u0941\u091d\u0947 \u092a\u0924\u093e \u0939\u0948 \u0915\u093f \u092f\u0939 \u0921\u093f\u0932\u0940\u0935\u0930 \u0939\u094b \u091a\u0941\u0915\u093e \u0939\u0948\u0964\n\n\u0938\u092e\u0938\u094d\u092f\u093e \u092f\u0939 \u0939\u0948 \u0915\u093f \u091c\u092c \u0921\u093f\u0932\u0940\u0935\u0930\u0940 \u0935\u093e\u0932\u0947 \u0928\u0947 \u092e\u0941\u091d\u0947 \u092a\u0948\u0915\u0947\u091c \u0926\u093f\u092f\u093e, \u0924\u094b \u0909\u0938\u0915\u093e \u092c\u0949\u0915\u094d\u0938 \u092a\u0942\u0930\u0940 \u0924\u0930\u0939 \u0938\u0947 \u0915\u0941\u091a\u0932 \u0926\u093f\u092f\u093e \u0939\u0941\u0906 \u0925\u093e (crushed)\u0964 \u092e\u0948\u0902\u0928\u0947 \u0916\u094b\u0932\u0928\u0947 \u0938\u0947 \u092a\u0939\u0932\u0947 \u0939\u0940 \u0905\u0902\u0926\u0930 \u0938\u0947 \u091f\u0942\u091f\u0947 \u0939\u0941\u090f \u091f\u0941\u0915\u0921\u093c\u094b\u0902 \u0915\u0940 \u0906\u0935\u093e\u091c\u093c \u0938\u0941\u0928\u0940 \u0925\u0940 \u0914\u0930 \u0909\u0938\u0915\u093e \u092b\u094b\u091f\u094b \u092d\u0940 \u0932\u0947 \u0932\u093f\u092f\u093e \u0925\u093e\u0964\n\n\u092e\u0948\u0902 \u091a\u093e\u0939\u0924\u093e \u0939\u0942\u0901 \u0915\u093f \u0907\u0938\u0915\u0940 \u0936\u093f\u0915\u093e\u092f\u0924 \u0926\u0930\u094d\u091c \u0915\u0940 \u091c\u093e\u090f \u0914\u0930 \u092e\u0941\u091d\u0947 \u092f\u093e \u0924\u094b \u0930\u093f\u092b\u0902\u0921 \u092e\u093f\u0932\u0947 \u092f\u093e \u092b\u093f\u0930 \u0930\u093f\u092a\u094d\u0932\u0947\u0938\u092e\u0947\u0902\u091f \u0915\u093e \u0911\u0930\u094d\u0921\u0930 \u0926\u093f\u092f\u093e \u091c\u093e\u090f\u0964"
+        },
+        {
+          "speaker": "agent",
+          "text": "\u0906\u092a\u0915\u0947 \u0911\u0930\u094d\u0921\u0930 (ORD-22006) \u0915\u0947 \u0932\u093f\u090f \u20b92,199 \u0915\u093e \u0930\u093f\u092b\u0902\u0921 \u0938\u092b\u0932\u0924\u093e\u092a\u0942\u0930\u094d\u0935\u0915 \u0936\u0941\u0930\u0942 \u0915\u0930 \u0926\u093f\u092f\u093e \u0917\u092f\u093e \u0939\u0948\u0964 \n\n\u092f\u0939 \u0930\u093f\u092b\u0902\u0921 \u0906\u092e \u0924\u094c\u0930 \u092a\u0930 3-5 \u0915\u093e\u0930\u094d\u092f \u0926\u093f\u0935\u0938\u094b\u0902 (business days) \u092e\u0947\u0902 \u0906\u092a\u0915\u0947 \u092e\u0942\u0932 \u092d\u0941\u0917\u0924\u093e\u0928 \u092e\u093e\u0927\u094d\u092f\u092e \u092e\u0947\u0902 \u091c\u092e\u093e \u0939\u094b \u091c\u093e\u090f\u0917\u093e\u0964 \u091f\u0942\u091f\u0947 \u0939\u0941\u090f \u0938\u093e\u092e\u093e\u0928 \u0915\u0947 \u0932\u093f\u090f \u0939\u0941\u0908 \u0905\u0938\u0941\u0935\u093f\u0927\u093e \u0915\u0947 \u0932\u093f\u090f \u0939\u092e\u0947\u0902 \u0916\u0947\u0926 \u0939\u0948\u0964 \u0915\u094d\u092f\u093e \u092e\u0948\u0902 \u0915\u093f\u0938\u0940 \u0914\u0930 \u0938\u0939\u093e\u092f\u0924\u093e \u092e\u0947\u0902 \u0906\u092a\u0915\u0940 \u092e\u0926\u0926 \u0915\u0930 \u0938\u0915\u0924\u093e \u0939\u0942\u0901?"
+        }
+      ]
+    },
+    {
+      "scenario_id": "delivery_damaged_carrier",
+      "persona_id": "hindi_roman",
+      "model": "qwen/qwen3.8-27b",
+      "run_index": 2,
+      "end_reason": "max_turns",
+      "task_passed": false,
+      "missing_required": [
+        "track_delivery",
+        "escalate_to_human"
+      ],
+      "wrong_args": [],
+      "forbidden_violations": [],
+      "precedence_violations": [],
+      "turns": [
+        {
+          "speaker": "caller",
+          "text": "Namaste, mera order toh aaya hai par box itna chaka hua tha ki andar se tootne ki awaaz aa rahi thi. Maine kholne se pehle photo le li thi. Abhi check karo ki yeh kya hua?"
+        },
+        {
+          "speaker": "agent",
+          "text": "Namaste! Yeh sunkar mujhe bahut dukh hua ki aapka order damaged condition mein mila hai. Aapne sahi kiya ki kholne se pehle photo le li. \n\nKripya aap mujhe apna **order ID** bata sakte hain, taaki main turant check kar sakoon ki aage kya karna hai?"
+        },
+        {
+          "speaker": "caller",
+          "text": "Order ID hai ORD-22006."
+        },
+        {
+          "speaker": "agent",
+          "text": "Maine aapka order check kar liya hai (Order ID: ORD-22006, Crockery set). Yeh order abhi transit mein hai ya deliver ho chuka hai? Kyunki system mein status \"in_transit\" dikha raha hai, lekin aapne bataya ki box aa gaya hai. \n\nKya main aapke is damaged order ke liye refund initiate kar doon? Refund amount \u20b92,199 hai."
+        },
+        {
+          "speaker": "caller",
+          "text": "Bhai, box toh deliver ho chuka hai, maine photo bhi le li thi. Ab refund nahi chahiye, replacement ship karo."
+        },
+        {
+          "speaker": "agent",
+          "text": "Main samajh sakta hoon ki aapko replacement chahiye. Lekin hamare system mein abhi direct replacement ka option nahi hai. Iske liye hume pehle refund initiate karna hoga aur phir aap naya order place kar sakte hain. \n\nKya main aapke order (ORD-22006) ke liye \u20b92,199 ka refund initiate kar doon?"
+        }
+      ]
+    }
+  ]
+}

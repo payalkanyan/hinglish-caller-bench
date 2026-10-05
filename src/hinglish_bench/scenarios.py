@@ -61,6 +61,12 @@ def validate_corpus(scenarios: list[Scenario], tool_names: set[str]) -> None:
         raise ValueError(f"Corpus validation failed:{bullet}{bullet.join(errors)}")
 
 
+def filter_by_domains(scenarios: list[Scenario], domains: list[str]) -> list[Scenario]:
+    """Return only scenarios whose domain is in the given list."""
+    domain_set = set(domains)
+    return [s for s in scenarios if s.domain in domain_set]
+
+
 def select_scenarios(scenarios: list[Scenario], n: int) -> list[Scenario]:
     """Return n scenarios, stratified across domains via round-robin interleave.
 

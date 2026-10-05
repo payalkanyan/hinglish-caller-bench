@@ -11,10 +11,12 @@ from hinglish_bench.providers.openai_compat import OpenAICompatProvider
 from hinglish_bench.providers.ratelimit import TokenBucket
 
 # Free-tier presets. Any field in RoleConfig can override them.
+# ollama uses a fixed dummy key — the local server ignores it.
 PRESETS: dict[str, tuple[str, str]] = {
     "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY"),
     "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai/", "GEMINI_API_KEY"),
     "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
+    "ollama": ("http://localhost:11434/v1", "OLLAMA_API_KEY"),
 }
 
 
@@ -48,7 +50,7 @@ class ProviderPool:
 
     def role(self, name: str, cfg: RoleConfig) -> Role:
         base_url, key_env = cfg.resolve()
-        api_key = os.environ.get(key_env)
+        api_key = os.environ.get(key_env, "ollama" if key_env == "OLLAMA_API_KEY" else "")
         if not api_key:
             # Name the variable, never the value.
             raise ConfigError(f"{name}: environment variable {key_env} is not set")

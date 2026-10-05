@@ -12,6 +12,8 @@ from typing import Any, Literal
 
 from hinglish_bench.agent import AgentTurn, AgentUnderTest, ToolDef
 from hinglish_bench.graders.task_completion import check_success  # noqa: F401
+import openai
+
 from hinglish_bench.providers.base import InfraError, Role
 from hinglish_bench.schemas import Persona, RunRecord, Scenario, Turn
 
@@ -59,13 +61,18 @@ def save_checkpoint(record: RunRecord, path: Path) -> None:
 
 
 def load_completed_keys(path: Path) -> set[tuple[str, str, str, int]]:
-    """Return (scenario_id, persona_id, model, run_index) for every line in the JSONL."""
+    """Return (scenario_id, persona_id, model, run_index) for successful lines in the JSONL.
+
+    Runs that ended with an infra_error are excluded so they are retried on the next run.
+    """
     keys: set[tuple[str, str, str, int]] = set()
     if not path.exists():
         return keys
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
             d = json.loads(line)
+            if d.get("infra_error"):
+                continue  # retry failed provider calls on next run
             keys.add((d["scenario_id"], d["persona_id"], d["model"], d["run_index"]))
         except (json.JSONDecodeError, KeyError):
             pass  # Corrupted line — skip but don't crash.
@@ -148,7 +155,7 @@ async def run_one(
             if ec:
                 end_reason = ec
                 break
-    except InfraError as exc:
+    except (InfraError, openai.BadRequestError) as exc:
         end_reason = "infra_error"
         infra_err = str(exc)
 

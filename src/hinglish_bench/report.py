@@ -56,10 +56,15 @@ class RunGrades:
 def grade_all(records: list[RunRecord], scenarios: dict[str, Scenario]) -> list[RunGrades]:
     """Grade every record for task_completion and tool_correctness.
 
+    Records with infra_error are skipped — a provider failure is not an agent failure
+    and must not inflate the failure rate. They are reported separately.
+
     language_fit is left None here; it requires an async LLM judge and is optional.
     """
     grades: list[RunGrades] = []
     for r in records:
+        if r.infra_error:
+            continue
         scenario = scenarios.get(r.scenario_id)
         if scenario is None:
             continue
@@ -211,13 +216,18 @@ def write_markdown(
     report: dict[str, Any],
     grades: list[RunGrades],
     path: Path,
+    records: list[RunRecord] | None = None,
 ) -> None:
     lines: list[str] = []
     lines.append("# hinglish-caller-bench Report\n")
 
     total = len(grades)
     successes = sum(1 for g in grades if g.task.passed)
-    lines.append(f"**Runs:** {total}  **Overall success:** {successes}/{total}\n")
+    infra_errors = sum(1 for r in (records or []) if r.infra_error)
+    lines.append(f"**Runs:** {total}  **Overall success:** {successes}/{total}")
+    if infra_errors:
+        lines.append(f"  **Infra errors (excluded from rates):** {infra_errors}")
+    lines.append("\n")
 
     # Table
     lines.append("## Results by persona × domain\n")
@@ -277,8 +287,19 @@ def generate(
     results_dir: Path,
     scenarios_dir: Path | None = None,
     k: int = 3,
+    judge_role: Any | None = None,
+    lf_sample: int | None = None,
 ) -> None:
-    """Load runs.jsonl, grade all records, and write summary.json + report.md."""
+    """Load runs.jsonl, grade all records, and write summary.json + report.md.
+
+    If judge_role is provided, the language-fit LLM judge runs. lf_sample limits
+    scoring to a random subset of N graded records (default: all).
+    """
+    import asyncio
+    import random
+
+    from hinglish_bench.graders.language_fit import grade_language_fit
+
     if scenarios_dir is None:
         scenarios_dir = Path("scenarios")
 
@@ -299,7 +320,33 @@ def generate(
         print("No records matched known scenarios. Check scenario IDs.")
         return
 
+    # Optional language-fit pass: run async judge (optionally on a sample).
+    if judge_role is not None:
+        grades_to_score = grades
+        if lf_sample is not None and lf_sample < len(grades):
+            grades_to_score = random.sample(grades, lf_sample)
+        print(f"Running language-fit judge on {len(grades_to_score)}/{len(grades)} records…")
+
+        async def _run_lf() -> None:
+            import asyncio as _asyncio
+            sem = _asyncio.Semaphore(4)
+
+            async def _one(g: RunGrades) -> None:
+                async with sem:
+                    try:
+                        g.language_fit = await grade_language_fit(
+                            g.record, g.record.persona_id, judge_role
+                        )
+                    except Exception as exc:
+                        print(f"  language-fit failed for {g.record.scenario_id}: {exc}")
+
+            await _asyncio.gather(*[_one(g) for g in grades_to_score])
+
+        asyncio.run(_run_lf())
+        scored = sum(1 for g in grades if g.language_fit is not None)
+        print(f"  Scored {scored}/{len(grades)} records.")
+
     report = compute_report(grades, scenarios, k=k)
     write_summary_json(report, results_dir / "summary.json")
-    write_markdown(report, grades, results_dir / "report.md")
+    write_markdown(report, grades, results_dir / "report.md", records=records)
     print(f"Wrote {results_dir / 'summary.json'} and {results_dir / 'report.md'}.")
