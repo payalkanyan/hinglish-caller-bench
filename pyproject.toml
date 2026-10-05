@@ -1,6 +1,6 @@
 [project]
 name = "hinglish-caller-bench"
-version = "0.1.0"
+version = "0.2.0"
 description = "Stress-test AI customer-service agents with simulated Hinglish, Hindi and English callers."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -46,6 +46,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hinglish_bench"]
+artifacts = ["src/hinglish_bench/scenarios/*.yaml"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/", "scenarios/", "README.md", "pyproject.toml"]
 
 [tool.ruff]
 line-length = 100

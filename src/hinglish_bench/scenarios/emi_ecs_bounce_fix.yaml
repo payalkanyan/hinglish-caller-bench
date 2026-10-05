@@ -1,0 +1,31 @@
+id: emi_ecs_bounce_fix
+domain: emi_reminder
+caller_goal: >
+  Your EMI ECS (Electronic Clearing System) bounced last month because you had switched
+  banks and your old account was closed. You now have a new bank account set up and
+  want the ECS mandate updated. This requires human verification — please ask the agent
+  to connect you with someone who can update the mandate details.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000004"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000004"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [check_emi_status, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

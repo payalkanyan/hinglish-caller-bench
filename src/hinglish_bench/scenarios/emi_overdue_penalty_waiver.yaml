@@ -1,0 +1,31 @@
+id: emi_overdue_penalty_waiver
+domain: emi_reminder
+caller_goal: >
+  Your loan EMI is 10 days overdue because your account had insufficient funds during a
+  medical emergency in the family. You have now arranged the funds and will pay today.
+  But a late penalty has been added — you want to request a one-time penalty waiver given
+  the circumstances. Ask the agent to escalate this to someone who can approve the waiver.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000003"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000003"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [check_emi_status, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

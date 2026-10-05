@@ -1,0 +1,31 @@
+id: emi_loan_closure
+domain: emi_reminder
+caller_goal: >
+  You want to foreclose your personal loan early — pay off everything right now and
+  close the account. You want to know the exact foreclosure amount including any charges.
+  Since foreclosure requires special approval, ask the agent to transfer you to the
+  loan closure team.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000006"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000006"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [check_emi_status, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

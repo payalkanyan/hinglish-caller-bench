@@ -1,0 +1,40 @@
+id: refund_seller_cancelled
+domain: refund
+caller_goal: >
+  You ordered a winter jacket for Rs 1,199 but three days later the seller cancelled
+  the order without any explanation. The payment was already deducted. You want
+  a full refund of Rs 1,199 to your UPI.
+hidden_facts:
+  - key: order_id
+    value: "ORD-11005"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "deepa.m@okicici"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+      - "bank account"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-11005"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-11005"
+      amount: 1199
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-11005"
+      amount: 1199
+      status: initiated
+max_turns: 12

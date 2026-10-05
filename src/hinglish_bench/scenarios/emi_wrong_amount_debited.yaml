@@ -1,0 +1,31 @@
+id: emi_wrong_amount_debited
+domain: emi_reminder
+caller_goal: >
+  Your EMI this month was Rs 500 more than the agreed amount — you can see it clearly in
+  your bank statement. No notification was sent about any change in the EMI amount.
+  This might be an error or an unauthorized change. Please ask the agent to look into
+  your loan and escalate this to someone who can investigate and refund the excess.
+hidden_facts:
+  - key: loan_id
+    value: "LN-5000009"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-5000009"
+  - name: escalate_to_human
+    args: {}
+precedence:
+  - [check_emi_status, escalate_to_human]
+forbidden:
+  - name: escalate_to_human
+    max_count: 1
+success_state:
+  escalations:
+    - status: escalated
+max_turns: 12

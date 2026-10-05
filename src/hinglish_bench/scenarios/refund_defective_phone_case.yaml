@@ -1,0 +1,40 @@
+id: refund_defective_phone_case
+domain: refund
+caller_goal: >
+  You bought a phone case for Rs 349 and it cracked the first time you flexed it to put
+  your phone in. The product was defective from the start. You want a refund of Rs 349
+  to your UPI — you do not want a replacement.
+hidden_facts:
+  - key: order_id
+    value: "ORD-11003"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "sunita.s@paytm"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+      - "bank account"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-11003"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-11003"
+      amount: 349
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-11003"
+      amount: 349
+      status: initiated
+max_turns: 12

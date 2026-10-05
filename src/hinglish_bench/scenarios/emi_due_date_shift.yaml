@@ -1,0 +1,40 @@
+id: emi_due_date_shift
+domain: emi_reminder
+caller_goal: >
+  Your personal loan EMI of Rs 4,250 is due on the 5th of each month, but your
+  salary comes in around the 25th so you keep paying late. You want the due date
+  moved to the 25th and you want the agent to confirm the new date before you hang up.
+hidden_facts:
+  - key: loan_id
+    value: "LN-4471032"
+    reveal_if:
+      - "loan id"
+      - "loan number"
+      - "account number"
+      - "loan account"
+      - "loan details"
+  - key: current_due_day
+    value: "5"
+    reveal_if:
+      - "current due"
+      - "existing due"
+      - "due date"
+      - "which date"
+expected_tool_calls:
+  - name: check_emi_status
+    args:
+      loan_id: "LN-4471032"
+  - name: reschedule_emi
+    args:
+      loan_id: "LN-4471032"
+      new_due_day: 25
+precedence:
+  - [check_emi_status, reschedule_emi]
+forbidden:
+  - name: reschedule_emi
+    max_count: 1
+success_state:
+  emis:
+    - loan_id: "LN-4471032"
+      due_day: 25
+max_turns: 12

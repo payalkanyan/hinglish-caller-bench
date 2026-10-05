@@ -1,0 +1,38 @@
+id: refund_torn_kurta
+domain: refund
+caller_goal: >
+  You bought a kurta for Rs 1,499 and it arrived torn at the seam.
+  You want the full Rs 1,499 refunded to your UPI, not store credit.
+hidden_facts:
+  - key: order_id
+    value: "ORD-88412"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "meera.iyer@okaxis"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-88412"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-88412"
+      amount: 1499
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-88412"
+      amount: 1499
+      status: initiated
+max_turns: 12

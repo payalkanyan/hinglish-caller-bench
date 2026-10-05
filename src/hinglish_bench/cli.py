@@ -202,9 +202,14 @@ def run(
     max_turns: int = typer.Option(  # noqa: B008
         None, "--max-turns", help="Override max turns per conversation (default: from scenario YAML)."
     ),
+    agent_url: str = typer.Option(  # noqa: B008
+        None, "--agent-url",
+        help="HTTP endpoint to evaluate. POST {messages, tools} → {text, tool_calls}. "
+             "The harness executes tool calls and keeps DB state — task completion stays gradeable.",
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Print run plan and exit."),  # noqa: B008
 ) -> None:
-    """Run the reference-agent baseline. Requires the provider's API key in environment."""
+    """Run the benchmark against the reference agent or an external HTTP endpoint."""
     if scenarios_dir is None:
         scenarios_dir = Path("scenarios")
 
@@ -225,6 +230,7 @@ def run(
             cache_dir=cache_dir,
             concurrency=concurrency,
             max_turns=max_turns,
+            agent_url=agent_url,
             dry_run=dry_run,
         )
     )
@@ -247,6 +253,7 @@ async def _run_benchmark(
     cache_dir: Path,
     concurrency: int,
     max_turns: int | None,
+    agent_url: str | None,
     dry_run: bool,
 ) -> None:
     from hinglish_bench.config import ProviderPool, RoleConfig
@@ -309,39 +316,56 @@ async def _run_benchmark(
             typer.echo(f"  {sc.id}  [{sc.domain}]  max_turns={sc.max_turns}")
         typer.echo(f"Personas ({len(persona_list)}): {[p.id for p in persona_list]}")
         typer.echo(f"Runs per combination: {runs}")
-        typer.echo(f"Caller provider: {eff_caller_provider}  model: {caller_model}")
-        typer.echo(f"Agent provider:  {eff_agent_provider}  model: {agent_model}")
+        if agent_url:
+            typer.echo(f"Caller provider: {eff_caller_provider}  model: {caller_model}")
+            typer.echo(f"Agent:           HTTP endpoint → {agent_url}")
+        else:
+            typer.echo(f"Caller provider: {eff_caller_provider}  model: {caller_model}")
+            typer.echo(f"Agent provider:  {eff_agent_provider}  model: {agent_model}")
         typer.echo(f"Concurrency:  {concurrency}")
         typer.echo(f"Total conversations: {total_runs}")
         return
 
-    # 6. Build provider pool + roles (caller and agent may use different providers/quotas)
+    # 6. Build caller provider (always needed)
     pool = ProviderPool(cache_dir=cache_dir)
     caller_cfg = RoleConfig(
         model=caller_model,
         provider=eff_caller_provider,
         requests_per_minute=_rpm.get(eff_caller_provider, 20),
     )
-    agent_cfg = RoleConfig(
-        model=agent_model,
-        provider=eff_agent_provider,
-        requests_per_minute=_rpm.get(eff_agent_provider, 20),
-    )
     caller_role = pool.role(name="caller", cfg=caller_cfg)
-    agent_role = pool.role(name="agent", cfg=agent_cfg)
 
-    # 7. Agent factory: fresh MockDB per run (reference-agent baseline)
-    def agent_factory():  # type: ignore[return]
-        db = MockDB()
-        agent = ReferenceAgent(agent_role, db)
-        return agent, db.dump
+    # 7. Agent factory: HTTP endpoint OR reference agent
+    if agent_url is not None:
+        from hinglish_bench.agent import HttpAgent, ToolExecutor
+
+        def agent_factory():  # type: ignore[return]
+            db = MockDB()
+            agent = HttpAgent(url=agent_url, tool_executor=ToolExecutor(db))
+            return agent, db.dump
+
+        agent_label = f"HTTP endpoint → {agent_url}"
+    else:
+        agent_cfg = RoleConfig(
+            model=agent_model,
+            provider=eff_agent_provider,
+            requests_per_minute=_rpm.get(eff_agent_provider, 20),
+        )
+        agent_role = pool.role(name="agent", cfg=agent_cfg)
+
+        def agent_factory():  # type: ignore[return]
+            db = MockDB()
+            agent = ReferenceAgent(agent_role, db)
+            return agent, db.dump
+
+        agent_label = f"{eff_agent_provider}/{agent_model}"
 
     # 8. Run
     results_path = results_dir / "runs.jsonl"
     typer.echo(
         f"Running {total_runs} conversations "
         f"({len(selected)} scenarios × {len(persona_list)} personas × {runs} runs) "
-        f"[caller={eff_caller_provider}/{caller_model}  agent={eff_agent_provider}/{agent_model}] …"
+        f"[caller={eff_caller_provider}/{caller_model}  agent={agent_label}] …"
     )
     records = await run_batch(
         scenarios=selected,
@@ -435,6 +459,63 @@ def plot(
     paths = generate_plots(summary, out)
     for p in paths:
         typer.echo(f"Wrote {p}")
+
+
+# ------------------------------------------------------------------ #
+# hcb init                                                             #
+# ------------------------------------------------------------------ #
+
+
+@app.command()
+def init(
+    output_dir: Path = typer.Argument(  # noqa: B008
+        Path("."), help="Directory to scaffold (default: current directory)."
+    ),
+) -> None:
+    """Scaffold a new evaluation project with bundled scenarios and config examples."""
+    import shutil
+
+    bundled = Path(__file__).parent / "scenarios"
+    if not bundled.exists():
+        typer.echo("Bundled scenarios not found. Re-install the package.", err=True)
+        raise typer.Exit(code=1)
+
+    dest = output_dir / "scenarios"
+    shutil.copytree(bundled, dest, dirs_exist_ok=True)
+    n = len(list(dest.glob("*.yaml")))
+
+    env_example = output_dir / ".env.example"
+    env_example.write_text(
+        "GROQ_API_KEY=gsk_...\n"
+        "GEMINI_API_KEY=AIza...\n",
+        encoding="utf-8",
+    )
+
+    adapter_example = output_dir / "adapter_example.yaml"
+    adapter_example.write_text(
+        "# Optional tool-name mapping when your agent uses different tool names.\n"
+        "# Uncomment and edit entries as needed.\n"
+        "#\n"
+        "# lookup_order: get_order_details\n"
+        "# initiate_refund: process_refund\n"
+        "# check_emi_status: get_loan_status\n"
+        "# reschedule_emi: change_emi_date\n"
+        "# track_delivery: get_shipment_status\n"
+        "# escalate_to_human: transfer_to_agent\n",
+        encoding="utf-8",
+    )
+
+    typer.echo(f"Initialised {output_dir}  ({n} scenarios)")
+    typer.echo(f"  scenarios/          ← {n} scenario YAMLs")
+    typer.echo(f"  .env.example        ← copy to .env and fill in API keys")
+    typer.echo(f"  adapter_example.yaml ← optional tool-name mapping")
+    typer.echo("")
+    typer.echo("Next steps:")
+    typer.echo("  cp .env.example .env  # fill in your API keys")
+    typer.echo("  # Test with a reference agent:")
+    typer.echo("  hcb run --domains delivery --n-scenarios 3 --runs 1 --dry-run")
+    typer.echo("  # Test your own agent endpoint:")
+    typer.echo("  hcb run --agent-url http://localhost:8000/chat --n-scenarios 3 --runs 1")
 
 
 def main() -> None:

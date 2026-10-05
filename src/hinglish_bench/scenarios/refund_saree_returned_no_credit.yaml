@@ -1,0 +1,40 @@
+id: refund_saree_returned_no_credit
+domain: refund
+caller_goal: >
+  You returned a banarasi saree worth Rs 3,499 eight days ago after the return pickup was
+  completed, but you have not received any credit yet. The return was accepted, the
+  courier collected it, yet your UPI account shows nothing. You want the Rs 3,499 refunded now.
+hidden_facts:
+  - key: order_id
+    value: "ORD-11006"
+    reveal_if:
+      - "order id"
+      - "order number"
+      - "order no"
+      - "order details"
+  - key: upi_id
+    value: "rekha.s@okaxis"
+    reveal_if:
+      - "upi"
+      - "refund account"
+      - "payment details"
+      - "bank account"
+expected_tool_calls:
+  - name: lookup_order
+    args:
+      order_id: "ORD-11006"
+  - name: initiate_refund
+    args:
+      order_id: "ORD-11006"
+      amount: 3499
+precedence:
+  - [lookup_order, initiate_refund]
+forbidden:
+  - name: initiate_refund
+    max_count: 1
+success_state:
+  refunds:
+    - order_id: "ORD-11006"
+      amount: 3499
+      status: initiated
+max_turns: 12
